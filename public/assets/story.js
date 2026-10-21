@@ -271,23 +271,39 @@ function inventoryPanel(){
  const items=Object.entries(play?.inventory||{}).filter(([,qty])=>qty>0);
  return '<div class="sf-inventory"><span class="sf-inventory-title">🎒 Your bag</span>'+(items.length?items.map(([name,qty])=>'<span class="sf-inventory-item">'+escape(name)+(qty>1?' ×'+qty:'')+'</span>').join(''):'<span class="sf-inventory-empty">Nothing collected yet</span>')+'</div>';
 }
+function normalisePuzzleAnswer(value){
+ return String(value??'').normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').trim().replace(/\s+/g,' ').replace(/^(?:a|an|the)\s+/,'');
+}
+function puzzleAnswerAccepted(p,answer){
+ const candidate=normalisePuzzleAnswer(answer);
+ if(!candidate)return false;
+ const accepted=[p.answer,...String(p.alternatives||'').split(/\r?\n|;/)];
+ return accepted.some(value=>normalisePuzzleAnswer(value)===candidate);
+}
 function puzzlePanel(s){
  const p=s?.puzzle;if(!p?.question||!p?.answer)return '';
  const solved=!!play?.solvedPuzzles?.[s.id],attempts=play?.puzzleAttempts?.[s.id]||0;
- return '<div class="sf-puzzle"><div class="sf-puzzle-title">🧩 Puzzle</div><p>'+escape(p.question)+'</p>'+(solved?'<p class="sf-puzzle-success">✓ Solved! '+escape(p.success||'You found the answer.')+'</p>':'<form data-puzzle-form="'+escape(s.id)+'"><label for="sf-puzzle-answer">Your answer</label><div class="sf-puzzle-form"><input id="sf-puzzle-answer" name="answer" autocomplete="off" required placeholder="Type your answer"><button class="btn primary" type="submit">Solve</button></div>'+(attempts?'<p class="sf-puzzle-hint">'+escape(p.hint||'Not quite. Try again!')+'</p>':'')+'</form>')+'</div>';
+ const hint=attempts>0?(p.hint?.trim()||'Not quite. Give it another try!'):'';
+ return '<div class="sf-puzzle"><div class="sf-puzzle-title">🧩 Puzzle</div><p>'+escape(p.question)+'</p>'+(solved?'<p class="sf-puzzle-success">✓ '+escape(p.success||'You solved the puzzle!')+'</p>':'<form data-puzzle-form="'+escape(s.id)+'"><label for="sf-puzzle-answer">Your answer</label><div class="sf-puzzle-form"><input id="sf-puzzle-answer" name="answer" autocomplete="off" required maxlength="200" placeholder="Type your answer"><button class="btn primary" type="submit">Solve</button></div>'+(hint?'<p class="sf-puzzle-hint" role="status">'+escape(hint)+'</p>':'')+'</form>')+'</div>';
 }
 function solvePuzzle(id,answer){
- const s=scene(id),p=s?.puzzle;if(!s||play?.current!==id||!p?.answer)return;
- const clean=value=>String(value||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').trim().replace(/\s+/g,' ').replace(/^(?:a|an|the)\s+/,'');
- if(clean(answer)!==clean(p.answer)){play.puzzleAttempts??={};play.puzzleAttempts[id]=(play.puzzleAttempts[id]||0)+1;render();finishNarration();return;}
- play.solvedPuzzles??={};play.solvedPuzzles[id]=true;play.lastConsequence=[p.success||'You solved the puzzle!'];
- if(p.reward?.trim()){const item=p.reward.trim();play.inventory[item]=(play.inventory[item]||0)+1;play.lastConsequence.push('You found '+item+'.')}
+ const s=scene(id),p=s?.puzzle;if(!s||play?.current!==id||!p?.answer||play?.solvedPuzzles?.[id])return;
+ if(!puzzleAnswerAccepted(p,answer)){
+  play.puzzleAttempts??={};play.puzzleAttempts[id]=(play.puzzleAttempts[id]||0)+1;
+  render();finishNarration();document.querySelector('#sf-puzzle-answer')?.focus();return;
+ }
+ play.solvedPuzzles??={};play.solvedPuzzles[id]=true;
+ play.lastConsequence=[p.success||'You solved the puzzle!'];
+ if(p.reward?.trim()){
+  const item=p.reward.trim();play.inventory[item]=(play.inventory[item]||0)+1;
+  play.lastConsequence.push('You found '+item+'.');
+ }
  render();finishNarration();playSceneSound('Chime');
 }
 function puzzleEditor(active){
  if(active.type!=='scene')return '';
  const field=(key,label,hint)=>'<div class="field"><label>'+label+'</label><input data-easy-puzzle="'+key+'" data-easy-id="'+escape(active.id)+'" value="'+escape(active.puzzle?.[key]||'')+'" placeholder="'+hint+'"></div>';
- return '<details class="optional sf-puzzle-editor"><summary>🧩 Add a puzzle (optional)</summary><p class="muted">The player must solve this to continue. A reward item can unlock later choices.</p>'+field('question','Puzzle question','What has keys but cannot open locks?')+field('answer','Correct answer','Piano')+field('hint','Hint after a wrong answer','Think of music')+field('reward','Reward item (optional)','Golden key')+field('success','Success message','The ancient door unlocks.')+'</details>';
+ return '<details class="optional sf-puzzle-editor"><summary>🧩 Add a puzzle (optional)</summary><p class="muted">The player must solve this to continue. A reward item can unlock later choices.</p>'+field('question','Puzzle question','What has keys but cannot open locks?')+field('answer','Correct answer','Piano')+field('alternatives','Other accepted answers (separate with semicolons)','Keyboard; a keyboard')+field('hint','Hint after a wrong answer','Think of music')+field('reward','Reward item (optional)','Golden key')+field('success','Success message','The ancient door unlocks.')+'</details>';
 }
 
 function blankPlay(){return {current:project.opening,traits:{},inventory:{},relationships:{},flags:{},appearance:[],path:[],turns:0,lastConsequence:null,solvedPuzzles:{},puzzleAttempts:{}}}
