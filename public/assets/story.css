@@ -189,3 +189,21 @@ body:has(.novel-screen) .novel-ending .inline-actions .btn{white-space:normal}
 @keyframes sf-character-entrance{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.sf-consequence,.novel-screen .novel-stage,.novel-screen .novel-character,.novel-screen .novel-support,.novel-screen .novel-ending{animation:none!important}}
 @media(max-width:600px){.sf-ending-progress{align-items:flex-start;flex-direction:column}.sf-consequence{padding:.55rem .7rem}}
+
+
+/* Player-only discovery map and secret ending controls */
+.sf-map-button{position:absolute;z-index:9;top:1rem;right:9.25rem;background:rgba(8,16,34,.75);border:1px solid rgba(255,255,255,.26);color:#fff;border-radius:999px;padding:.45rem .8rem;font:inherit;font-size:.83rem;cursor:pointer;backdrop-filter:blur(8px)}
+.sf-map-button:hover,.sf-map-button:focus-visible{background:rgba(28,48,71,.96);outline:2px solid rgba(149,247,212,.45)}
+.sf-map-modal{width:min(480px,calc(100vw - 2rem));max-height:min(85dvh,780px);overflow:auto}
+.sf-map-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+.sf-map-head h2{margin:.2rem 0 .6rem}
+.sf-map-route{display:flex;flex-direction:column;gap:0;margin-top:1rem}
+.sf-map-stop{position:relative;display:flex;align-items:flex-start;gap:.8rem;padding:0 0 1.2rem;color:inherit}
+.sf-map-stop:not(:last-child)::before{content:'';position:absolute;left:.63rem;top:1.25rem;bottom:0;width:2px;background:rgba(117,226,201,.35)}
+.sf-map-dot{flex:0 0 1.35rem;height:1.35rem;border-radius:50%;display:grid;place-items:center;color:#a9e8db;background:rgba(74,135,131,.19)}
+.sf-map-stop.current .sf-map-dot{color:#ffe5a3;background:rgba(255,210,102,.2)}
+.sf-map-stop>div{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.sf-map-stop strong{font-size:.97rem}
+.sf-map-stop small{color:inherit;opacity:.7}
+.sf-map-future{border:1px dashed rgba(142,188,185,.5);border-radius:10px;padding:.8rem;font-size:.87rem;opacity:.85}
+@media(max-width:600px){.sf-map-button{top:.7rem;right:7.2rem;font-size:.75rem;padding:.4rem .6rem}}
