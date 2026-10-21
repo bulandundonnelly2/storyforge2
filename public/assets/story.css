@@ -300,3 +300,18 @@ body:has(.novel-screen) .novel-read-controls{margin-top:.4rem}
 }
 body:has(.novel-screen) .sf-artwork-only .novel-dialogue,
 body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
+
+
+/* Character responses in visual-novel mode */
+.sf-character-mood{display:inline-block;padding:.1rem .45rem;margin-right:.3rem;border:1px solid rgba(180,222,246,.5);border-radius:6px;color:#d1ecff;background:#19334a;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
+.sf-mood-Happy{color:#ffe9a0;border-color:#f5cd70;background:#44381a}
+.sf-mood-Worried,.sf-mood-Sad{color:#afd8ff;border-color:#779fc5;background:#19283d}
+.sf-mood-Angry{color:#ffc0a5;border-color:#e68e74;background:#481e27}
+.sf-mood-Surprised{color:#f2d5ff;border-color:#c99ce1;background:#332344}
+.sf-mood-Mysterious{color:#c7f5e9;border-color:#7acabd;background:#173d3b}
+.sf-character-editor textarea{min-height:70px}
+.novel-character.sf-emotion-Happy{filter:brightness(1.12) saturate(1.08)}
+.novel-character.sf-emotion-Worried,.novel-character.sf-emotion-Sad{filter:brightness(.85) saturate(.83)}
+.novel-character.sf-emotion-Angry{filter:contrast(1.12) saturate(1.18)}
+.novel-character.sf-emotion-Surprised{filter:brightness(1.16)}
+.novel-character.sf-emotion-Mysterious{filter:brightness(.92) hue-rotate(7deg)}
