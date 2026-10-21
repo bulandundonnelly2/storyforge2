@@ -257,3 +257,46 @@ body:has(.novel-screen) .sf-artwork-only .novel-stage{height:100%}
 @media(prefers-reduced-motion:reduce){
  body:has(.novel-screen) .novel-dialogue{transition:none}
 }
+
+
+/* Unified visual-novel reading dock: narration sits directly above choices. */
+body:has(.novel-screen) .novel-book{grid-template-rows:minmax(0,1fr) auto}
+body:has(.novel-screen) .novel-stage{min-height:0}
+body:has(.novel-screen) .novel-dialogue,
+body:has(.novel-screen) .novel-book.has-choices .novel-dialogue{
+ position:absolute;top:auto;bottom:0;left:50%;right:auto;
+ transform:translateX(-50%);width:min(980px,calc(100% - 32px));
+ max-width:none;max-height:min(34dvh,310px);min-height:0;
+ margin:0;padding:.8rem 1.25rem .65rem;
+ border-radius:14px 14px 0 0;border-bottom:0;
+ background:linear-gradient(180deg,rgba(8,16,32,.91),rgba(6,12,27,.98));
+ box-shadow:0 -10px 35px rgba(0,0,0,.35);
+ overflow-y:auto;z-index:4;animation:none;
+}
+body:has(.novel-screen) .novel-dialogue h1{font-size:clamp(1.1rem,2vw,1.6rem);margin:.15rem 0 .3rem}
+body:has(.novel-screen) .novel-text{max-height:15dvh;overflow-y:auto;line-height:1.55;margin:.25rem 0}
+body:has(.novel-screen) .novel-next,
+body:has(.novel-screen) .novel-book.has-choices .novel-next{
+ position:relative;inset:auto;flex:0 0 auto;
+ max-height:min(29dvh,265px);min-height:0;
+ overflow-y:auto;padding:.65rem clamp(1rem,3vw,2rem) .9rem;
+ border-top:2px solid var(--blue);
+ background:#080e22;animation:none;
+}
+body:has(.novel-screen) .novel-next .sf-inventory:has(.sf-inventory-empty){display:none}
+body:has(.novel-screen) .novel-next .sf-ending-progress{margin-bottom:.35rem}
+body:has(.novel-screen) .novel-next .novel-prompt{margin-bottom:.45rem}
+body:has(.novel-screen) .novel-choice-list{gap:.65rem}
+body:has(.novel-screen) .novel-read-controls{margin-top:.4rem}
+@media(max-width:700px){
+ body:has(.novel-screen) .novel-dialogue,
+ body:has(.novel-screen) .novel-book.has-choices .novel-dialogue{
+  left:50%;right:auto;bottom:0;width:calc(100% - 12px);
+  padding:.55rem .75rem .5rem;max-height:32dvh;border-radius:11px 11px 0 0;
+ }
+ body:has(.novel-screen) .novel-text{max-height:14dvh}
+ body:has(.novel-screen) .novel-next,
+ body:has(.novel-screen) .novel-book.has-choices .novel-next{max-height:34dvh;padding:.65rem .75rem 1rem}
+}
+body:has(.novel-screen) .sf-artwork-only .novel-dialogue,
+body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
