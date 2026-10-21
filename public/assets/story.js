@@ -219,7 +219,25 @@ function discoveredEndings(){try{const value=JSON.parse(localStorage.getItem(end
 function recordEnding(){const current=scene(play?.current);if(current?.type!=='ending')return;try{const discovered=new Set(discoveredEndings());discovered.add(current.id);localStorage.setItem(endingStoreKey(),JSON.stringify([...discovered]))}catch{}}
 function endingProgress(){const endings=project.scenes.filter(s=>s.type==='ending'),found=new Set(discoveredEndings());if(!endings.length)return '';return '<div class="sf-ending-progress" aria-label="Discovered story endings"><span>✦ Endings discovered: '+endings.filter(s=>found.has(s.id)).length+' / '+endings.length+'</span><div class="sf-ending-gems">'+endings.map(s=>'<span title="'+escape(found.has(s.id)?s.title:'Undiscovered ending')+'" class="'+(found.has(s.id)?'found':'')+'">'+(found.has(s.id)?'◆':'◇')+'</span>').join('')+'</div></div>'}
 function consequenceMessage(){const p=play?.lastConsequence;if(!Array.isArray(p)||!p.length)return '';return '<div class="sf-consequence" role="status"><span class="sf-consequence-spark" aria-hidden="true">✦</span><div><span>'+p.map(escape).join(' · ')+'</span></div></div>'}
-function describeEffects(effects){return (effects||[]).filter(e=>e.key).map(e=>{const amount=Number(e.amount)||1;if(e.kind==='inventory')return (amount<0?'Lost ':'Collected ')+e.key;if(e.kind==='relationship')return e.key+(amount<0?' trusts you less':' trusts you more');if(e.kind==='trait')return e.key+(amount<0?' decreased':' increased');if(e.kind==='flag')return 'Story changed: '+e.key;if(e.kind==='appearance')return 'New detail: '+e.key;return e.key}).slice(0,3)}
+function describeEffects(effects){
+  const traitLines={
+    Empathy:['You feel a little more connected to others.','That choice leaves you less compassionate.'],
+    Kindness:['Your kindness shines through.','A little kindness slips away.'],
+    Courage:['You find the courage to go further.','Your confidence falters.'],
+    Curiosity:['Your curiosity draws you deeper into the mystery.','You choose to leave some questions unanswered.'],
+    Cunning:['You learn to think one step ahead.','Your clever edge slips.'],
+    Silliness:['Your playful side comes through.','The moment turns more serious.']
+  };
+  return (effects||[]).filter(e=>e&&typeof e.key==='string'&&e.key.trim()).map(e=>{
+    const key=e.key.trim(),amount=Number(e.amount??1),down=amount<0;
+    if(e.kind==='inventory')return down?'You no longer have the '+key+'.':'You now carry the '+key+'.';
+    if(e.kind==='relationship')return down?key+' trusts you a little less now.':key+' begins to trust you more.';
+    if(e.kind==='trait')return traitLines[key]?.[down?1:0]||(down?'Your '+key.toLowerCase()+' is tested.':'You grow in '+key.toLowerCase()+'.');
+    if(e.kind==='flag')return down?null:'A new thread opens in your story: '+key+'.';
+    if(e.kind==='appearance')return 'Something about you has changed: '+key+'.';
+    return null;
+  }).filter(Boolean).slice(0,2);
+}
 
 function blankPlay(){return {current:project.opening,traits:{},inventory:{},relationships:{},flags:{},appearance:[],path:[],turns:0,lastConsequence:null}}
 function available(c){const req=c.condition;if(req?.all)return req.all.every(rule=>available({condition:rule}));if(req?.any)return req.any.some(rule=>available({condition:rule}));if(!req?.kind||!req.key)return true;let bag=req.kind==='trait'?play.traits:req.kind==='inventory'?play.inventory:req.kind==='relationship'?play.relationships:play.flags;const present=(bag[req.key]||0)>=(Math.max(1,Number(req.min)||1));return req.not?!present:present}
