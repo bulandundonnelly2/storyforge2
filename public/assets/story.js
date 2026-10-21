@@ -278,7 +278,7 @@ function puzzlePanel(s){
 }
 function solvePuzzle(id,answer){
  const s=scene(id),p=s?.puzzle;if(!s||play?.current!==id||!p?.answer)return;
- const clean=value=>String(value||'').trim().toLocaleLowerCase().replace(/\s+/g,' ');
+ const clean=value=>String(value||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}\s]/gu,' ').trim().replace(/\s+/g,' ').replace(/^(?:a|an|the)\s+/,'');
  if(clean(answer)!==clean(p.answer)){play.puzzleAttempts??={};play.puzzleAttempts[id]=(play.puzzleAttempts[id]||0)+1;render();finishNarration();return;}
  play.solvedPuzzles??={};play.solvedPuzzles[id]=true;play.lastConsequence=[p.success||'You solved the puzzle!'];
  if(p.reward?.trim()){const item=p.reward.trim();play.inventory[item]=(play.inventory[item]||0)+1;play.lastConsequence.push('You found '+item+'.')}
