@@ -186,6 +186,6 @@ body:has(.novel-screen) .novel-ending .inline-actions .btn{white-space:normal}
 .novel-screen .novel-ending{animation:sf-reveal .5s ease-out both}
 @keyframes sf-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes sf-scene-entrance{from{opacity:.6;filter:brightness(.65)}to{opacity:1;filter:brightness(1)}}
-@keyframes sf-character-entrance{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sf-character-entrance{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.sf-consequence,.novel-screen .novel-stage,.novel-screen .novel-character,.novel-screen .novel-support,.novel-screen .novel-ending{animation:none!important}}
 @media(max-width:600px){.sf-ending-progress{align-items:flex-start;flex-direction:column}.sf-consequence{padding:.55rem .7rem}}
