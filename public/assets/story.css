@@ -224,3 +224,36 @@ body:has(.novel-screen) .novel-ending .inline-actions .btn{white-space:normal}
 .sf-puzzle-hint{color:#ffe6af;font-size:.88rem}
 .sf-puzzle-success{color:#aff2cf;font-weight:650}
 .sf-puzzle-editor{margin:1rem 0}
+
+
+/* Visual novel mode: let illustration lead, narration remain easy to read. */
+body:has(.novel-screen) .novel-dialogue{
+ left:clamp(12px,3vw,42px);right:auto;width:min(620px,calc(100% - 24px));max-width:none;
+ bottom:clamp(12px,2vh,24px);padding:clamp(.75rem,1.4vw,1.1rem);
+ background:linear-gradient(145deg,rgba(10,20,36,.94),rgba(8,17,30,.89));
+ border:1px solid rgba(198,228,235,.48);border-radius:13px;
+ max-height:min(37dvh,310px);overflow-y:auto;transition:bottom .25s ease,opacity .2s ease;
+}
+body:has(.novel-screen) .novel-dialogue h1{font-size:clamp(1.05rem,1.7vw,1.45rem);margin:.15rem 0 .35rem}
+body:has(.novel-screen) .novel-text{max-height:17dvh;overflow-y:auto;line-height:1.55}
+body:has(.novel-screen) .novel-book.has-choices .novel-dialogue{bottom:calc(min(29dvh,255px) + 12px);max-height:min(26dvh,225px)}
+body:has(.novel-screen) .novel-next{max-height:29dvh;overflow:auto}
+body:has(.novel-screen) .novel-book.has-choices .novel-next{min-height:0}
+.sf-artwork-toggle{position:absolute;z-index:10;top:1rem;right:15rem;
+ border:1px solid rgba(255,255,255,.55);border-radius:999px;
+ color:#fff;background:rgba(5,15,30,.84);padding:.5rem .8rem;
+ font:700 .78rem ui-monospace,monospace;cursor:pointer;backdrop-filter:blur(8px)}
+.sf-artwork-toggle:hover,.sf-artwork-toggle:focus-visible{background:#17465a;outline:2px solid #9ce7de}
+body:has(.novel-screen) .sf-artwork-only .novel-dialogue,
+body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
+body:has(.novel-screen) .sf-artwork-only .novel-stage{height:100%}
+@media(max-width:700px){
+ body:has(.novel-screen) .novel-dialogue{left:8px;right:8px;width:auto;bottom:8px;max-height:32dvh}
+ body:has(.novel-screen) .novel-book.has-choices .novel-dialogue{bottom:calc(min(34dvh,250px) + 8px);max-height:25dvh}
+ body:has(.novel-screen) .novel-next{max-height:34dvh}
+ body:has(.novel-screen) .novel-text{max-height:13dvh}
+ .sf-artwork-toggle{top:3.55rem;right:.55rem;font-size:.72rem;padding:.38rem .58rem}
+}
+@media(prefers-reduced-motion:reduce){
+ body:has(.novel-screen) .novel-dialogue{transition:none}
+}
