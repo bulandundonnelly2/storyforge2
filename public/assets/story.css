@@ -344,3 +344,21 @@ body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
 .sf-invite-published-details p{color:#f5f7ff}
 .sf-invite-published-details small{color:#c8eaf2}
 @media(max-width:540px){.sf-invite-shell{box-shadow:5px 5px 0 #2929f7}.sf-invite-cover{aspect-ratio:4/3}.sf-invite-published-card{grid-template-columns:1fr}.sf-invite-published-art{height:150px;min-height:0}}
+
+
+/* Eldernight invitation: fixed fantasy artwork, compact layout, 8-bit typography */
+.sf-invite-screen{font-family:PressStart,'Press Start 2P',ui-monospace,monospace}
+.sf-invite-shell{width:min(800px,100%)}
+.sf-invite-banner{font-family:PressStart,'Press Start 2P',monospace;font-size:clamp(.65rem,1.8vw,1.08rem);line-height:1.8}
+.sf-invite-tagline{display:block;font-size:clamp(.42rem,1.04vw,.64rem);letter-spacing:0;color:#ffec00}
+.sf-invite-cover{background:#02031a url('/assets/bg-enchanted-ruins.webp') center/cover no-repeat;position:relative;min-height:260px;aspect-ratio:1.8;image-rendering:pixelated}
+.sf-invite-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 15%,rgba(0,0,15,.15) 90%);pointer-events:none}
+.sf-invite-wizard{position:absolute;z-index:1;left:-2%;bottom:-1%;width:45%;height:105%;background:url('/assets/char-mage.webp') bottom left/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(5px 3px 0 #080026)}
+.sf-invite-information{text-align:center;padding:clamp(1.1rem,3.5vw,2.2rem)}
+.sf-invite-kicker{font-family:PressStart,'Press Start 2P',monospace;line-height:1.85;font-size:clamp(.64rem,1.7vw,.95rem);letter-spacing:0;color:#00f4ff}
+.sf-invite-challenge{font-family:PressStart,'Press Start 2P',monospace;font-size:clamp(1.05rem,3vw,2rem);line-height:1.5;color:#ffe400;text-shadow:3px 4px #d400da;margin:1.2rem 0 1.8rem}
+.sf-invite-play{font-family:PressStart,'Press Start 2P',monospace;font-size:clamp(.72rem,1.6vw,1.05rem);line-height:1.7}
+.sf-invite-links button,.sf-invite-footer{font-family:PressStart,'Press Start 2P',monospace;font-size:clamp(.48rem,1vw,.68rem);line-height:1.9}
+.sf-invite-published-art{background:#02031a url('/assets/bg-enchanted-ruins.webp') center/cover no-repeat;position:relative}
+.sf-invite-published-art::after{content:"";position:absolute;bottom:0;left:0;width:48%;height:100%;background:url('/assets/char-mage.webp') left bottom/contain no-repeat;image-rendering:pixelated}
+@media(max-width:540px){.sf-invite-cover{min-height:190px;aspect-ratio:4/3}.sf-invite-wizard{width:53%}.sf-invite-banner{padding:.6rem .3rem}}
