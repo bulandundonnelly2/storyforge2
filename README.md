@@ -45,3 +45,9 @@ Run `npm ci` and `npm run dev`. Without Turso credentials, development uses loca
 `GET /api/ready` returns uncached `200 {"ready":true}` only after storage initialization and queries against both story tables succeed. Missing production Turso credentials, connection/schema failures, and probes taking longer than three seconds return `503 {"ready":false}`. Responses contain no credentials or database details. Local development checks its configured local SQLite database.
 
 The Render Blueprint uses `/api/ready` as `healthCheckPath`. For an existing manually configured service, set **Settings → Health Check Path** to `/api/ready`; merging this file does not establish that the dashboard setting changed. This check verifies database access, not Clerk email delivery or every save/publish permission. Repeated failed database checks may cause Render to restart the service; restarting cannot resolve an external Turso outage.
+
+## Private ELDERNIGHT admin dashboard
+
+Visit `/admin` after setting the production environment variable `ELDERNIGHT_ADMIN_USER_ID` to the administrator's **Clerk user ID** (for example `user_...`). Set it in Vercel Project → Settings → Environment Variables, then redeploy. Never use a public `NEXT_PUBLIC_` prefix for this value.
+
+The API checks the authenticated Clerk session on every request and requires an exact user-ID match; a user merely visiting `/admin` cannot retrieve statistics. The dashboard reports actual Clerk registered-user count (when available), creator accounts with saved games, draft count, published count, JSON content bytes, and number of games last updated in the current UTC month. It does not misrepresent JSON byte totals as Turso billed disk usage or monthly updated-game counts as Vercel/Turso provider consumption. Check the Vercel and Turso usage dashboards for provider quotas.
