@@ -7,9 +7,20 @@ export async function storyOwner(request: NextRequest) {
   const anonymous = { owner: null, signedIn: false };
   if (!secretKey || !publishableKey || !request.headers.get('authorization')?.startsWith('Bearer ')) return anonymous;
   const clerk = createClerkClient({ secretKey, publishableKey });
-  const origin = process.env.STORYFORGE_APP_URL || 'https://storyforge-phlc.onrender.com';
+  // Clerk's session token contains the frontend origin (azp). Accept the live
+  // ElderNight domains as well as the deployment's configured canonical URL.
+  const allowedOrigins = new Set([
+    'https://eldernight.com',
+    'https://www.eldernight.com',
+    'https://storyforge2-red.vercel.app',
+    process.env.STORYFORGE_APP_URL,
+  ].filter((origin): origin is string => Boolean(origin)));
+  if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.add('http://localhost:3000');
+    allowedOrigins.add('http://127.0.0.1:3101');
+  }
   const state = await clerk.authenticateRequest(request, {
-    authorizedParties: process.env.NODE_ENV === 'production' ? [origin] : [origin, 'http://localhost:3000', 'http://127.0.0.1:3101'],
+    authorizedParties: [...allowedOrigins],
     acceptsToken: 'session_token',
   });
   const auth = state.toAuth();
