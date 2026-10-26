@@ -362,3 +362,10 @@ body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
 .sf-invite-published-art{background:#02031a url('/assets/bg-enchanted-ruins.webp') center/cover no-repeat;position:relative}
 .sf-invite-published-art::after{content:"";position:absolute;bottom:0;left:0;width:48%;height:100%;background:url('/assets/char-mage.webp') left bottom/contain no-repeat;image-rendering:pixelated}
 @media(max-width:540px){.sf-invite-cover{min-height:190px;aspect-ratio:4/3}.sf-invite-wizard{width:53%}.sf-invite-banner{padding:.6rem .3rem}}
+/* The third title-screen destination links to the official merchandise store. */
+.title-actions{max-width:1100px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.title-action{text-decoration:none}
+.title-merch{border-color:var(--yellow)}
+.title-merch .eyebrow{color:var(--yellow)}
+@media(max-width:920px){.title-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.title-merch{grid-column:1/-1}}
+@media(max-width:700px){.title-actions{grid-template-columns:1fr}.title-merch{grid-column:auto}}
