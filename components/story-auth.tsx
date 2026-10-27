@@ -29,7 +29,7 @@ function AccountBridge() {
     return () => { delete window.storyforgeAuth; };
   }, [isLoaded, userId, getToken, clerk]);
   return <div className="story-account-bar" aria-label="Your account">
-    <a className="story-merch-link" href="https://zcfsdx-cv.myshopify.com/" target="_blank" rel="noopener noreferrer">✦ Merch ↗</a>
+    <a className="story-merch-link" href="https://zcfsdx-cv.myshopify.com/" target="_blank" rel="noopener noreferrer">✦ Loot ↗</a>
     {!isLoaded ? <span>Loading account…</span> : userId ? <>
       <button className="btn sm" onClick={() => window.dispatchEvent(new Event('storyforge-my-games'))}>My Games</button>
       <span className="story-account-email">{user?.primaryEmailAddress?.emailAddress}</span>
@@ -40,7 +40,7 @@ function AccountBridge() {
 
 export function StoryAuth({ children, publishableKey }: { children: React.ReactNode; publishableKey?: string }) {
   if (!publishableKey) return <>
-    <div className="story-account-bar"><a className="story-merch-link" href="https://zcfsdx-cv.myshopify.com/" target="_blank" rel="noopener noreferrer">✦ Merch ↗</a><span>Account login is being set up. You can still create and play.</span></div>
+    <div className="story-account-bar"><a className="story-merch-link" href="https://zcfsdx-cv.myshopify.com/" target="_blank" rel="noopener noreferrer">✦ Loot ↗</a><span>Account login is being set up. You can still create and play.</span></div>
     {children}
   </>;
   return <ClerkProvider publishableKey={publishableKey}><AccountBridge />{children}</ClerkProvider>;
