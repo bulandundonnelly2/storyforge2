@@ -85,5 +85,10 @@ window.starlessThrone=()=>{
  F('end_ashes','An Empty Victory',`Nacre becomes a silent ring of molten stone. The High Marshal declares the frontier secure. Then the stars start going out one by one. The prisons elsewhere begin to fail without their central intelligence, and no one alive understands how to repair them. Your victory message reaches the capital on the last working relay. There is no one left at the other end to answer.`),
  F('end_revolt','The Broken Armada',`You turn the artillery on the engines that power the fleet. The ships fall dark, ending the bombardment and trapping thousands of soldiers in the frontier. Yet the Witness’s prisons begin to fracture, and scattered crews form uneasy alliances with their former enemies. Whether the rebellion becomes a republic or another empire depends on what its survivors build from the wreckage.`),
  F('end_obedience','The Duty of Silence',`You obey every order and return to the capital with medals and a spotless record. Official reports say Nacre was uninhabited. At night, the passenger manifest glows behind your eyes: seventy thousand names, each erased by a signature you recognise as your own. It is possible to survive a war without ever leaving the battlefield behind.`)
- ]};
+ ].map(scene=>({...scene,art:(
+ ['signal','fleet','oracle','evac','quarantine','marshal','serin','bombard','end_revolt','end_obedience'].includes(scene.id)?'starless-orbit.svg':
+ ['nacre','tower','end_ashes'].includes(scene.id)?'starless-nacre.svg':
+ ['undercity','archive','release'].includes(scene.id)?'starless-memory-vault.svg':
+ 'starless-throne.svg'
+ )}))};
 };
