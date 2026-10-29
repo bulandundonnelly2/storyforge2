@@ -68,5 +68,11 @@ window.emberVaultAdventure=()=>{
  F('end_tyrant','The Ashen Crown',`The golden chain answers your command. Flames blaze across the kingdom, and crowds cheer a new saviour. Beneath the mountain, Aurelith grows silent. Each night your throne feels colder despite the roaring fires. The people are safe for now. You have become the next keeper of the prison—and the next chapter of its curse.`),
  F('end_guardian','The Seventh Blade',`The Guardian Ember falls between the roots. The spell fractures without breaking the mountain, and the captive dragon awakens. Aurelith bows to the wounded guardian, who at last turns to stone in peace. Together you and the dragon carry new fire to the villages. The ancient debt is settled, though the rebuilding has only begun.`),
  F('end_warning','The Long Winter',`You seal the vault and flee with the truth. No dragon burns the kingdom, but the hearths weaken, village by village. You spend the winter organising shelters and sharing the story the kings tried to erase. Your choice did not end the danger. It gave the people a chance to decide for themselves before the next moonrise.`)
- ]};
+ ].map(scene=>({...scene,art:(
+ ['tavern'].includes(scene.id)?'ember-tavern.png':
+ ['forest','patrol','marsh','tower','maproom','gate','guardian'].includes(scene.id)?'ember-gateway.png':
+ ['court','end_tyrant'].includes(scene.id)?'ember-court.png':
+ ['dragon','end_freedom','end_pact','end_guardian'].includes(scene.id)?'ember-dragon.png':
+ 'ember-vault.png'
+ )}))};
 };
