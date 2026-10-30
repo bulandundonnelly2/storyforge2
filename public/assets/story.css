@@ -400,3 +400,11 @@ body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
 @media(prefers-reduced-motion:reduce){.sf-dice-modal *{animation:none!important;transition:none!important}.sf-dice-modal{backdrop-filter:none}}
 
 .sf-dice-fallback{display:none}
+
+/* Compact home shortcut during gameplay: keep choices inside the viewport. */
+body:has(.novel-screen) .sf-compact-home{position:absolute;z-index:25;top:76px;left:12px;pointer-events:none}
+.sf-compact-home-button{pointer-events:auto;background:#050713e8;color:#ffe500;border:1px solid #00eaff;font:700 11px/1.4 monospace;letter-spacing:.04em;padding:6px 10px;cursor:pointer;box-shadow:3px 3px 0 #ff00dd}
+.sf-compact-home-button:hover,.sf-compact-home-button:focus-visible{background:#191b44;outline:2px solid #ffe500}
+body:has(.novel-screen) .novel-screen{height:auto;min-height:0}
+body:has(.novel-screen) .novel-book{height:calc(100dvh - 65px);min-height:420px}
+@media(max-width:700px){body:has(.novel-screen) .sf-compact-home{top:58px;left:5px}body:has(.novel-screen) .novel-book{height:calc(100dvh - 58px);min-height:330px}.sf-compact-home-button{padding:5px 7px;font-size:10px}}
