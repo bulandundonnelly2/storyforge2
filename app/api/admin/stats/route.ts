@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
     const db = await storyDb();
     const monthStart = new Date();
     monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
-    const [gameCounts, publishedCounts, logicalBytes, monthlyEdits, owners] = await Promise.all([
+    await db.execute(`CREATE TABLE IF NOT EXISTS site_visits (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT NOT NULL, session_hash TEXT NOT NULL, visited_at INTEGER NOT NULL)`);
+    const today = new Date().toISOString().slice(0,10);
+    const [visits, gameCounts, publishedCounts, logicalBytes, monthlyEdits, owners] = await Promise.all([
+      db.execute({sql:'SELECT COUNT(*) AS views, COUNT(DISTINCT session_hash) AS sessions, SUM(CASE WHEN day = ? THEN 1 ELSE 0 END) AS today_views, COUNT(DISTINCT CASE WHEN day = ? THEN session_hash END) AS today_sessions FROM site_visits', args:[today,today]}),
       db.execute('SELECT COUNT(*) AS total FROM stories'),
       db.execute('SELECT COUNT(*) AS total FROM published_stories'),
       db.execute('SELECT COALESCE(SUM(LENGTH(CAST(content AS BLOB))),0) AS bytes FROM stories'),
@@ -41,6 +44,10 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json({
       registeredUsers,
+      pageViews:Number(visits.rows[0]?.views ?? 0),
+      pageViewsToday:Number(visits.rows[0]?.today_views ?? 0),
+      visitorSessions:Number(visits.rows[0]?.sessions ?? 0),
+      visitorSessionsToday:Number(visits.rows[0]?.today_sessions ?? 0),
       creatorsWithSavedGames: Number(owners.rows[0]?.total ?? 0),
       totalGames: Number(gameCounts.rows[0]?.total ?? 0),
       publishedGames: Number(publishedCounts.rows[0]?.total ?? 0),
