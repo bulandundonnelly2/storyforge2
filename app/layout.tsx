@@ -4,4 +4,4 @@ import { StoryAuth } from '@/components/story-auth';
 import { PageVisitTracker } from '@/components/page-visit-tracker';
 
 export const metadata: Metadata = { title: 'ELDERNIGHT — Legends you create. Adventures you forge.', description: 'Create, save and share interactive story games.' };
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="en"><head><link rel="stylesheet" href="/assets/story.css?v=dice-20261030-2" /></head><body><StoryAuth publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}><PageVisitTracker />{children}</StoryAuth></body></html>; }
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="en"><head><link rel="stylesheet" href="/assets/story.css?v=dice-20261030-3" /></head><body><StoryAuth publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}><PageVisitTracker />{children}</StoryAuth></body></html>; }
