@@ -10,10 +10,10 @@ export async function POST(request: NextRequest) {
   try {
     const origin = request.headers.get('origin');
     if (origin && origin !== new URL(request.url).origin) return new NextResponse(null, { status: 403 });
-    const body = await request.json();
+    const body = await request.json() as { session?: unknown };
     if (typeof body.session !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.session)) return new NextResponse(null, { status: 400 });
     const day = new Date().toISOString().slice(0, 10);
-    const sessionHash = createHash('sha256').update(body.session).digest('hex');
+    const sessionHash = createHash('sha256').update(body.session as string).digest('hex');
     const db = await storyDb();
     await db.execute(`CREATE TABLE IF NOT EXISTS site_visits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
