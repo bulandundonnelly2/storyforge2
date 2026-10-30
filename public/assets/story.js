@@ -471,7 +471,7 @@ function diceCubeMarkup(){
  return `<div class="sf-dice-cube" aria-hidden="true">${Object.entries(pips).map(([face,spots])=>`<div class="sf-dice-face sf-dice-face-${face}">${spots.map(spot=>`<i style="grid-area:${Math.ceil(spot/3)}/${(spot-1)%3+1}"></i>`).join('')}</div>`).join('')}</div>`;
 }
 function showDiceRoll(c){
- const diceStyles='/assets/story.css?v=dice-20261030-2';
+ const diceStyles='/assets/story.css?v=dice-20261030-3';
  if(!document.querySelector('link[href="'+diceStyles+'"]')){const link=document.createElement('link');link.rel='stylesheet';link.href=diceStyles;document.head.append(link)}
  if(document.querySelector('.sf-dice-modal'))return;
  const run=play,origin=play.current,opener=document.activeElement;
@@ -492,13 +492,15 @@ function showDiceRoll(c){
   const angles={1:[0,0],2:[0,-90],3:[-90,0],4:[90,0],5:[0,90],6:[0,180]},[x,y]=angles[value];
   cube.style.setProperty('--land-x',x+'deg');cube.style.setProperty('--land-y',y+'deg');
   modal.querySelector('.sf-dice-fallback').textContent='🎲';arena.dataset.state='rolling';status.textContent='The die is cast…';playSceneSound('Select');
+  if(!reduced)setTimeout(()=>{if(modal.isConnected){status.textContent='It balances on the edge…';button.textContent='Hold your breath…'}},3000);
   setTimeout(()=>{
    if(!modal.isConnected)return;
    modal.querySelector('.sf-dice-fallback').textContent=['⚀','⚁','⚂','⚃','⚄','⚅'][value-1];arena.dataset.state='landed';modal.dataset.outcome=success?'success':'failure';
    cube.style.transform=`rotateX(${x}deg) rotateY(${y}deg)`;
    status.innerHTML=`<strong>You rolled ${value}</strong> <span>${success?'SUCCESS': 'FAILURE'} · Target ${c.roll.target}+</span>`;
-   playSceneSound(success?'Chime':'Reveal');button.textContent='Accept outcome →';button.disabled=false;
+   playSceneSound(success?'Chime':'Reveal');button.textContent='Your fate is sealed…';
+   setTimeout(()=>{if(modal.isConnected){button.textContent='Accept outcome →';button.disabled=false;button.focus()}},reduced?0:1000);
    button.onclick=()=>{if(button.disabled)return;button.disabled=true;close();if(play===run&&play.current===origin)choose({...result,rollResolved:true})};button.focus();
-  },reduced?150:1700);
+  },reduced?150:4200);
  };
 }
