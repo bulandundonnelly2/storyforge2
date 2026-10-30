@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 globalThis.window={};
-const games=[['crown','crownOfAsh'],['pip','pipAdventure'],['city','cityBelow'],['clock','clockworkKingdom'],['blackwater','bellsBeneathBlackwater'],['moonberry','moonberryPicnic'],['ember-vault','emberVaultAdventure'],['starless-throne','starlessThrone'],['hollow-king','hollowKing']];
+const games=[['choir-of-iron','choirOfIron'],['crown','crownOfAsh'],['pip','pipAdventure'],['city','cityBelow'],['clock','clockworkKingdom'],['blackwater','bellsBeneathBlackwater'],['moonberry','moonberryPicnic'],['ember-vault','emberVaultAdventure'],['starless-throne','starlessThrone'],['hollow-king','hollowKing']];
 const owners=new Map();let scenes=0;
 for(const [file,fn] of games){
  await import('../public/assets/'+file+'.js');
