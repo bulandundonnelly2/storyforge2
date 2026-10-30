@@ -9,11 +9,11 @@ window.hollowKing=()=>{
  const E=(kind,key,amount=1)=>({kind,key,amount});
  const C=(text,target,effects=[],condition)=>({id:'hollow_'+(++n),text,target,effects,...(condition?{condition}:{})});
  const R=(text,target,threshold,failure,risk,effects=[],failed=[])=>({...C(text,target,effects),roll:{target:threshold,failure,risk,effects:failed}});
- const S=(id,title,text,choices=[],art='crown-crypt.webp')=>({id,title,text,choices,art,type:choices.length?'scene':'ending',background:'Castle',portrait:'Knight',motion:'Mist',music:'Dungeon',sound:'None'});
+ const S=(id,title,text,choices=[],art='hollow-crypt.webp')=>({id,title,text,choices,art,type:choices.length?'scene':'ending',background:'Castle',portrait:'Knight',motion:'Mist',music:'Dungeon',sound:'None'});
  const has=key=>({kind:'inventory',key,min:1});
  return {version:2,title:'The Crypt of the Hollow King',genre:'Fantasy',world:'The Mourning March',description:'★★★★★ · A deadly, original tabletop-inspired dungeon adventure. Roll one six-sided die: meet or beat the shown target. Injuries and lost companions persist. Death ends your run; there are no rerolls.',hook:'Before dawn, the king beneath the mountain will borrow a living heart. Your sister’s is already slowing.',heroName:'The Last Lantern',heroGoal:'Destroy the king’s heart and bring your sister home',portrait:'Knight',background:'Castle',music:'Dungeon',opening:'inn',scenes:[
  S('inn','The Empty Chair','Your sister Elian returned from the barrow three nights ago. Tonight her reflection stood up without her. Now she lies cold beside the inn fire, whispering a king’s name no living mouth should know. Before dawn, his buried heart will claim hers.\n\nTwo strangers offer help: Sable, a disgraced scout who once abandoned her company in these tunnels, and Brother Cael, a healer carrying a bell with its tongue removed. You have time to recruit only one.\n\nDeadly adventure: one d6, no rerolls. Each risky choice shows its target and consequences. Death ends this run.',[
- C('Take Sable and her climbing rope.','gate',[E('relationship','Sable'),E('inventory','Rope')]),C('Take Cael and his last healing draught.','gate',[E('relationship','Cael'),E('inventory','Healing draught')])],'ember-tavern.png'),
+ C('Take Sable and her climbing rope.','gate',[E('relationship','Sable'),E('inventory','Rope')]),C('Take Cael and his last healing draught.','gate',[E('relationship','Cael'),E('inventory','Healing draught')])],'hollow-inn.webp'),
  S('gate','A Door That Remembers','The barrow door is warm. Names crawl across its stone, including Elian’s. A bronze sentry asks for a living voice to replace the one stolen from its throat. Sable’s old company lies beyond this door; Cael’s silent bell begins to tremble. A drainage shaft offers another way in.',[
  R('Force the sentry aside.','hall',4,'wounded','Failure: a lasting injury.',[E('trait','Courage')],[E('flag','Injured')]),
  R('Crawl through the narrow shaft.','hall',3,'captured','Failure: capture and loss of your equipment.'),
@@ -46,5 +46,5 @@ window.hollowKing=()=>{
  S('fall_death','The Light Below','A chain snaps. Your torch falls first. Its light grows smaller until the dark takes it. There is no echo when you follow. Your adventure ends here.'),
  S('cage_death','The Broken Cage','The lock opens. So does the floor. The crowned shadow watches from above while your cage falls into the dark. Your adventure ends here.'),
  S('drowned','A Fare Not Paid','The boat will not move for a thief. Black water rises over its sides, cold and impossibly heavy. The ferryman stands on the shore and waits until your lantern goes out. Your adventure ends here.')
- ]};
+ ].map(scene=>({...scene,art:scene.id==='inn'?'hollow-inn.webp':['bridge','ferryman','fall_death','drowned'].includes(scene.id)?'hollow-bridge.webp':['heart','name_check','named','written','freedom','crowned','sacrifice','name_victory','silent_death','king_death'].includes(scene.id)?'hollow-throne.webp':'hollow-crypt.webp'}))};
 };
