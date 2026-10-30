@@ -17,6 +17,8 @@ export default function PrivacyPolicy() {
     <p>You can play publicly shared games without an account. Saving and publishing your own games requires an account. If you publish a story, anyone with its sharing link can access the published content. Avoid adding sensitive personal information to published stories.</p>
     <h2>Service providers</h2>
     <p>ElderNight relies on third parties, including Clerk for authentication, Google when you use Google sign-in, and hosting and database providers to operate and store the Service. Their handling of data is also subject to their applicable terms and privacy notices.</p>
+    <h2>Anonymous visitor counts</h2>
+    <p>We count page loads and approximate visitor sessions to understand site usage. A random per-tab session identifier is stored in session storage and its hash is recorded with a visit date and timestamp. This counter does not retain IP addresses or identify individual people. It begins collecting data only after launch, and distinct sessions should not be interpreted as distinct people.</p>
     <h2>Cookies and local storage</h2>
     <p>Account authentication uses cookies. ElderNight may use browser storage to remember local editing progress and preferences. Clearing site data may remove locally stored work or sign you out.</p>
     <h2>Retention and legal bases</h2>
