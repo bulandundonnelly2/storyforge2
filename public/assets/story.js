@@ -471,12 +471,14 @@ function diceCubeMarkup(){
  return `<div class="sf-dice-cube" aria-hidden="true">${Object.entries(pips).map(([face,spots])=>`<div class="sf-dice-face sf-dice-face-${face}">${spots.map(spot=>`<i style="grid-area:${Math.ceil(spot/3)}/${(spot-1)%3+1}"></i>`).join('')}</div>`).join('')}</div>`;
 }
 function showDiceRoll(c){
+ const diceStyles='/assets/story.css?v=dice-20261030-2';
+ if(!document.querySelector('link[href="'+diceStyles+'"]')){const link=document.createElement('link');link.rel='stylesheet';link.href=diceStyles;document.head.append(link)}
  if(document.querySelector('.sf-dice-modal'))return;
  const run=play,origin=play.current,opener=document.activeElement;
  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  const modal=document.createElement('div');modal.className='modal-back sf-dice-modal';
  const sparks=Array.from({length:16},(_,i)=>{const angle=i*Math.PI/8;return `<i style="--dx:${Math.round(Math.cos(angle)*155)}px;--dy:${Math.round(Math.sin(angle)*125)}px;--spark-delay:${i%3*35}ms"></i>`}).join('');
- modal.innerHTML=`<div class="modal sf-dice-dialog" role="dialog" aria-modal="true" aria-labelledby="sf-dice-title" tabindex="-1"><div class="eyebrow">A roll of fate</div><h2 id="sf-dice-title">One roll. Real consequences.</h2><p>${escape(c.text)}</p><div class="sf-dice-target">D6 <span>·</span> Roll <strong>${c.roll.target}+</strong> to succeed</div><p class="sf-dice-warning">${escape(c.roll.risk)}</p><div class="sf-dice-arena" data-state="ready"><div class="sf-dice-runes" aria-hidden="true">✦</div><div class="sf-dice-shadow" aria-hidden="true"></div><div class="sf-dice-lift">${diceCubeMarkup()}</div><div class="sf-dice-shockwave" aria-hidden="true"></div><div class="sf-dice-sparks" aria-hidden="true">${sparks}</div></div><div class="sf-dice-result" role="status" aria-live="polite" aria-atomic="true">Your fate is waiting.</div><div class="sf-dice-actions"><button class="btn primary" data-roll>Roll the die</button><button class="btn" data-cancel>Choose another action</button></div></div>`;
+ modal.innerHTML=`<div class="modal sf-dice-dialog" role="dialog" aria-modal="true" aria-labelledby="sf-dice-title" tabindex="-1"><div class="eyebrow">A roll of fate</div><h2 id="sf-dice-title">One roll. Real consequences.</h2><p>${escape(c.text)}</p><div class="sf-dice-target">D6 <span>·</span> Roll <strong>${c.roll.target}+</strong> to succeed</div><p class="sf-dice-warning">${escape(c.roll.risk)}</p><div class="sf-dice-fallback" aria-hidden="true" style="font-size:96px;text-align:center;line-height:1.5">⚄</div><div class="sf-dice-arena" data-state="ready"><div class="sf-dice-runes" aria-hidden="true">✦</div><div class="sf-dice-shadow" aria-hidden="true"></div><div class="sf-dice-lift">${diceCubeMarkup()}</div><div class="sf-dice-shockwave" aria-hidden="true"></div><div class="sf-dice-sparks" aria-hidden="true">${sparks}</div></div><div class="sf-dice-result" role="status" aria-live="polite" aria-atomic="true">Your fate is waiting.</div><div class="sf-dice-actions"><button class="btn primary" data-roll>Roll the die</button><button class="btn" data-cancel>Choose another action</button></div></div>`;
  const oldInert=app.inert;app.inert=true;
  const close=()=>{app.inert=oldInert;modal.remove();if(opener?.isConnected)opener.focus()};
  document.body.append(modal);const button=modal.querySelector('[data-roll]'),dialog=modal.querySelector('[role="dialog"]');button.focus();modal.querySelector('[data-cancel]').onclick=close;
@@ -489,12 +491,12 @@ function showDiceRoll(c){
   const arena=modal.querySelector('.sf-dice-arena'),cube=modal.querySelector('.sf-dice-cube'),status=modal.querySelector('.sf-dice-result');
   const angles={1:[0,0],2:[0,-90],3:[-90,0],4:[90,0],5:[0,90],6:[0,180]},[x,y]=angles[value];
   cube.style.setProperty('--land-x',x+'deg');cube.style.setProperty('--land-y',y+'deg');
-  arena.dataset.state='rolling';status.textContent='The die is cast…';playSceneSound('Select');
+  modal.querySelector('.sf-dice-fallback').textContent='🎲';arena.dataset.state='rolling';status.textContent='The die is cast…';playSceneSound('Select');
   setTimeout(()=>{
    if(!modal.isConnected)return;
-   arena.dataset.state='landed';modal.dataset.outcome=success?'success':'failure';
+   modal.querySelector('.sf-dice-fallback').textContent=['⚀','⚁','⚂','⚃','⚄','⚅'][value-1];arena.dataset.state='landed';modal.dataset.outcome=success?'success':'failure';
    cube.style.transform=`rotateX(${x}deg) rotateY(${y}deg)`;
-   status.innerHTML=`<strong>You rolled ${value}</strong><span>${success?'SUCCESS': 'FAILURE'} · Target ${c.roll.target}+</span>`;
+   status.innerHTML=`<strong>You rolled ${value}</strong> <span>${success?'SUCCESS': 'FAILURE'} · Target ${c.roll.target}+</span>`;
    playSceneSound(success?'Chime':'Reveal');button.textContent='Accept outcome →';button.disabled=false;
    button.onclick=()=>{if(button.disabled)return;button.disabled=true;close();if(play===run&&play.current===origin)choose({...result,rollResolved:true})};button.focus();
   },reduced?150:1700);
