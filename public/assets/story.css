@@ -368,3 +368,5 @@ body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
 .story-account-bar .story-merch-link:focus-visible{outline:3px solid #00eaff;outline-offset:3px}
 @media(max-width:600px){.story-account-bar .story-merch-link{font-size:8px;padding:8px 10px;min-height:31px}}
 @media(prefers-reduced-motion:reduce){.story-account-bar .story-merch-link{transition:none}}
+
+.sf-roll-risk{display:block;margin-top:.5rem;color:#ffe500;font-size:.8rem;line-height:1.6}.sf-die{font-family:monospace;font-size:4rem;text-align:center;color:#00eaff;padding:1rem;border:3px solid #ff00dd;margin:1rem auto;width:8rem}.sf-die-tumble{animation:sf-dice-spin .15s steps(2) infinite}@keyframes sf-dice-spin{to{transform:rotate(20deg) scale(.9)}}@media(prefers-reduced-motion:reduce){.sf-die-tumble{animation:none}}
