@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 type Stats = {
  registeredUsers:number|null; creatorsWithSavedGames:number; totalGames:number;
  publishedGames:number; storedContentBytes:number; gamesUpdatedThisMonth:number;
- month:string; note:string;
+ month:string; note:string; pageViews:number; pageViewsToday:number; visitorSessions:number; visitorSessionsToday:number;
 };
 const format=(n:number|null)=>n===null?'Unavailable':n.toLocaleString('en-GB');
 export default function AdminPage(){
@@ -27,6 +27,10 @@ export default function AdminPage(){
  },[isLoaded,isSignedIn,getToken]);
  useEffect(()=>{void refresh()},[refresh]);
  const cards=stats?[
+  ['Page views',format(stats.pageViews),'Tracked page loads since tracking began'],
+  ['Page views today',format(stats.pageViewsToday),'UTC calendar day'],
+  ['Visitor sessions',format(stats.visitorSessions),'Distinct anonymous browser-tab sessions'],
+  ['Visitor sessions today',format(stats.visitorSessionsToday),'Distinct sessions today (UTC)'],
   ['Registered users',format(stats.registeredUsers),'Clerk total users'],
   ['Creators with games',format(stats.creatorsWithSavedGames),'Distinct accounts with saved games'],
   ['Saved games',format(stats.totalGames),'All stored drafts'],
