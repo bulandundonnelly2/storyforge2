@@ -29,8 +29,8 @@ export default function AdminPage(){
  const cards=stats?[
   ['Page views',format(stats.pageViews),'Tracked page loads since tracking began'],
   ['Page views today',format(stats.pageViewsToday),'UTC calendar day'],
-  ['Visitor sessions',format(stats.visitorSessions),'Distinct anonymous browser-tab sessions'],
-  ['Visitor sessions today',format(stats.visitorSessionsToday),'Distinct sessions today (UTC)'],
+  ['Unique visitors',format(stats.visitorSessions),'Distinct anonymous browser-tab sessions since tracking began; an estimate, not people'],
+  ['Unique visitors today',format(stats.visitorSessionsToday),'Distinct anonymous browser-tab sessions today (UTC); an estimate, not people'],
   ['Registered users',format(stats.registeredUsers),'Clerk total users'],
   ['Creators with games',format(stats.creatorsWithSavedGames),'Distinct accounts with saved games'],
   ['Saved games',format(stats.totalGames),'All stored drafts'],
