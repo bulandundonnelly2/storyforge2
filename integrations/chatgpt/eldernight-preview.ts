@@ -1,4 +1,4 @@
-import { validateAdventureDraft, type AdventureDraft } from "./adventure-schema";
+import { validateAdventureDraft, type AdventureDraft } from "./adventure-schema.js";
 
 /**
  * Convert a validated ChatGPT-created draft into the existing ELDERNIGHT
