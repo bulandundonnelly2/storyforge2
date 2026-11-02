@@ -30,3 +30,18 @@ See `adventure-schema.ts`. It validates a candidate draft and verifies scene ref
 - Run tests for branching, failure/death endings, privacy and dice fairness.
 - Test in ChatGPT developer mode, then submit for review.
 - Do not merge or deploy until reviewed.
+
+
+## Implemented preview MCP server (development branch only)
+
+Run from `integrations/chatgpt`: `npm install && npm run check && npm run dev`.
+The endpoint is `http://localhost:3400/mcp`; `/health` is a non-sensitive status check.
+
+Current tools: `get_app_options`, `validate_adventure_draft`,
+`preview_adventure`, and `get_published_adventure`.
+The published-adventure tool only accesses explicitly shared public stories from
+the existing read-only `/api/play/{token}` endpoint.
+No private story retrieval, account authentication, save, publish, or database mutation
+is implemented. Do not expose this preview server publicly without further
+hardening, deployment configuration, rate limits, and verification.
+The site and live database remain untouched.
