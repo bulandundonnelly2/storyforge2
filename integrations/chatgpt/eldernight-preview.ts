@@ -4,9 +4,9 @@ import { validateAdventureDraft, type AdventureDraft } from "./adventure-schema"
  * Convert a validated ChatGPT-created draft into the existing ELDERNIGHT
  * version-2 project format. Pure function; never writes to live storage.
  *
- * Dice rules remain in the draft contract. We deliberately DO NOT silently
- * map these to the website's dice system until its exact persistence shape
- * has been verified. This avoids presenting a broken dice game as playable.
+ * Supports the site's native six-sided dice choice shape (roll.target,
+ * roll.failure, roll.risk, roll.effects). Other dice types fail validation.
+ * This converter does not persist data or perform rolls.
  */
 export function toEldernightPreview(input: unknown) {
   const result = validateAdventureDraft(input);
