@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "test": "node --import tsx --test adventure.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.0",
