@@ -51,6 +51,6 @@ test("missing failure outcome cannot be exported", () => {
 });
 test("ending scene cannot include further choices", () => {
   const input=draft();
-  input.scenes[1].choices.push({id:"extra",label:"Continue",nextSceneId:"death",dice:{enabled:true,sides:6,target:3,successSceneId:"death",failureSceneId:"start"}});
+  (input.scenes[1].choices as typeof input.scenes[0]["choices"]).push({id:"extra",label:"Continue",nextSceneId:"death",dice:{enabled:true,sides:6,target:3,successSceneId:"death",failureSceneId:"start"}});
   assert.equal(validateAdventureDraft(input).ok,false);
 });
