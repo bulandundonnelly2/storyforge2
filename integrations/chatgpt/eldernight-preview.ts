@@ -13,14 +13,18 @@ export function toEldernightPreview(input: unknown) {
   if (!result.ok) return result;
   const draft: AdventureDraft = result.draft;
   const diceChoices = draft.scenes.flatMap(scene =>
-    scene.choices.filter(choice => choice.dice?.enabled).map(choice => `${scene.id}/${choice.id}`)
+    scene.choices.filter(choice => choice.dice?.enabled).map(choice => ({ scene, choice }))
   );
-  if (diceChoices.length) {
-    return { ok: false as const, errors: [
-      "Dice-enabled choices require mapping to the site's native dice format before export.",
-      ...diceChoices.map(id => `Dice mapping needed: ${id}`),
-    ] };
+  const diceErrors: string[] = [];
+  for (const { scene, choice } of diceChoices) {
+    const dice = choice.dice!;
+    if (dice.sides !== 6) diceErrors.push(`Six-sided dice required at ${scene.id}/${choice.id}`);
+    if (dice.target == null || dice.target < 2 || dice.target > 6) diceErrors.push(`Target must be between 2 and 6 at ${scene.id}/${choice.id}`);
+    if (!choice.nextSceneId || !dice.failureSceneId) diceErrors.push(`Success and failure destinations required at ${scene.id}/${choice.id}`);
+    if (dice.successSceneId && dice.successSceneId !== choice.nextSceneId) diceErrors.push(`Success scene must equal choice destination at ${scene.id}/${choice.id}`);
+    if (dice.failureSceneId === choice.nextSceneId) diceErrors.push(`Dice outcome destinations must differ at ${scene.id}/${choice.id}`);
   }
+  if (diceErrors.length) return { ok: false as const, errors: diceErrors };
 
   const project = {
     version: 2,
@@ -53,6 +57,14 @@ export function toEldernightPreview(input: unknown) {
         text: choice.label,
         target: choice.nextSceneId,
         effects: [],
+        ...(choice.dice?.enabled ? {
+          roll: {
+            target: choice.dice.target!,
+            failure: choice.dice.failureSceneId!,
+            risk: "Failure: the attempt goes wrong.",
+            effects: [],
+          },
+        } : {}),
       })),
     })),
   };
