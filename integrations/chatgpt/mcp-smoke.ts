@@ -37,7 +37,10 @@ try {
       title:"Test",premise:"Test adventure",genre:"Fantasy",readingLevel:3,startSceneId:"one",
       scenes:[{id:"one",title:"Start",narration:"You stand before the gate.",ending:"victory",choices:[]}]
     }}});
-    assert.ok(JSON.stringify(preview).includes('"ok":true'));
+    const payload = preview.content?.find(item => item.type === "text");
+    assert.ok(payload && payload.type === "text", "No JSON text tool response");
+    const parsed = JSON.parse(payload.text);
+    assert.equal(parsed.ok, true, JSON.stringify(parsed));
     console.log("MCP handshake, tools/list and preview_adventure: PASS");
   } finally {await client.close();}
 } finally {processServer.kill();}
