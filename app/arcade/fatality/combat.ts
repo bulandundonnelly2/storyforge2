@@ -51,7 +51,7 @@ function posture(f:Fighter,move:number,guard:boolean,crouch:boolean){
  f.guardLow=f.guard&&f.crouch;
  f.guardFrames=f.guard?f.guardFrames+1:0;
  if(f.guard){f.stamina=clamp(f.stamina-.22,0,100)}
- else f.stamina=clamp(f.stamina+(f.action?.2:f.stun>0?.16:Math.abs(move)>0?.31:.49),0,100);
+ else f.stamina=clamp(f.stamina+(f.action?0.2:f.stun>0?0.16:Math.abs(move)>0?0.31:0.49),0,100);
  const velocityLimit=f.guard?0.52:f.crouch?0.62:f.action?0.48:f.stun>0?0:2.65;
  const desired=clamp(move,-1,1)*velocityLimit;
  f.vx=approach(f.vx,desired,f.action?0.26:.32);
