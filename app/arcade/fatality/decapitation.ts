@@ -1,5 +1,5 @@
 // Fatality Forge: clean ZX Spectrum-style finisher.
-// One flourish, one cut, three bold connected RED-water streams, kneel, collapse, title.
+// Flying neck chop, small detailed skull, bold stepped red streams, kneel, collapse and clear title.
 // All artwork and effects are original, drawn using crisp unfiltered pixels.
 import type {World} from './combat';
 type Actor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean,spin?:number)=>void;
@@ -12,37 +12,42 @@ function block(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,
 }
 // Four bold, connected RED-water arcs, each starting at the exposed neck.
 // They sit BEHIND the body so the skull flight, kneeling and collapse remain readable.
+// Clear, thick, stepped 8-bit red-water arcs drawn behind the body.
+// Strong connected streams, a few blocky highlights and one grounded pool.
 function redWater(ctx:CanvasRenderingContext2D,x:number,y:number,dir:number,age:number){
  const streams=[
-  {start:111,end:216,height:131,reach:182,width:24},
-  {start:128,end:226,height:109,reach:164,width:21},
-  {start:153,end:234,height:85,reach:137,width:18},
-  {start:180,end:237,height:62,reach:105,width:15}
+  {start:111,end:218,height:118,reach:158,width:20},
+  {start:130,end:226,height:94,reach:138,width:17},
+  {start:153,end:232,height:72,reach:112,width:15}
  ];
- // One smooth, expanding red pool at the base. Keep it beneath the figures.
- if(age>=125){
-  const growth=ease((age-125)/82),span=45+Math.round(204*growth);
-  const left=dir>0?x-23:x-span+23;
-  block(ctx,left,337,span,9,DARK);
-  block(ctx,left+4,337,Math.max(4,span-8),6,RED);
-  block(ctx,left+18,344,Math.max(4,span-42),3,DARK);
- }
  for(const p of streams){
+  if(age<p.start||age>=p.end)continue;
   const elapsed=age-p.start;
-  if(elapsed<0||age>=p.end)continue;
-  const rise=ease(elapsed/10),fade=1-ease((age-(p.end-14))/14);
-  const strength=rise*fade;
+  const growth=ease(elapsed/10);
+  const fade=1-ease((age-(p.end-15))/15);
+  const strength=growth*fade;
   if(strength<=0)continue;
-  const reach=p.reach*rise;
-  for(let i=0;i<=50;i++){
-   const u=i/50;
-   const px=x+dir*(4+u*reach);
-   const py=y-p.height*Math.sin(Math.PI*u)*strength+(337-y)*u*u;
-   const thickness=Math.max(3,Math.round(p.width*(1-.32*u)*strength));
-   // Thick stepped ribbons: red core, dark outline; never a spray of loose particles.
-   block(ctx,px-1,py-1,thickness+2,thickness+2,DARK);
-   block(ctx,px,py,thickness,thickness,RED);
+  const reach=p.reach*growth;
+  // The four-pixel coordinate grid makes each bend a visible staircase.
+  for(let i=0;i<=24;i++){
+   const u=i/24;
+   const px=Math.round((x+dir*(5+u*reach))/4)*4;
+   const py=Math.round((y-p.height*Math.sin(Math.PI*u)*strength+(338-y)*u*u)/4)*4;
+   const width=Math.max(5,Math.round(p.width*(1-.32*u)*strength));
+   block(ctx,px-2,py-2,width+4,width+3,DARK);
+   block(ctx,px,py,width,width,RED);
+   if(i%7===0&&strength>.4)block(ctx,px+2,py+2,Math.max(3,width-5),3,WHITE);
   }
+ }
+ // Ground pool extends in the direction of the stream; never across the sprite.
+ if(age>=126){
+  const spread=ease((age-126)/76);
+  const span=60+Math.round(206*spread);
+  const left=dir>0?x-28:x-span+28;
+  block(ctx,left,338,span,10,DARK);
+  block(ctx,left+4,338,Math.max(8,span-8),7,RED);
+  block(ctx,left+18,346,Math.max(8,span-42),3,DARK);
+  block(ctx,left+12,335,Math.max(8,span-76),4,RED);
  }
 }
 export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number,actor:Actor,helmet?:Helmet){
@@ -113,16 +118,17 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
    const x=landed?enemy+dir*180:enemy+dir*(8+172*flight);
    const y=landed?316-14*Math.abs(Math.sin((age-174)*.16))*Math.exp(-(age-174)/15)
       :197-116*Math.sin(Math.PI*flight)+112*flight*flight;
-   helmet(x,y,dir*(landed?5.4+(age-174)*.012:5.4*flight),51);
+   helmet(x,y,dir*(landed?5.4+(age-174)*.012:5.4*flight),37);
   }
  }
  // Clean aftermath, then the large title only once all action has settled.
- if(age>=222){
-  const alpha=ease((age-222)/12);
-  block(ctx,183,90,434,119,'rgba(0,0,0,'+(.9*alpha).toFixed(3)+')');
+ // Compact title above the action; no rectangle crosses the fighters.
+ if(age>=228){
+  const alpha=ease((age-228)/12);
+  block(ctx,220,38,360,92,'rgba(0,0,0,'+(.72*alpha).toFixed(3)+')');
   ctx.save();ctx.globalAlpha=alpha;ctx.textAlign='center';
-  ctx.fillStyle=WHITE;ctx.font='bold 53px monospace';ctx.fillText('FATALITY',400,155);
-  ctx.fillStyle=RED;ctx.font='bold 19px monospace';ctx.fillText('DECAPITATION',400,190);
+  ctx.fillStyle=WHITE;ctx.font='bold 48px monospace';ctx.fillText('FATALITY',400,92);
+  ctx.fillStyle=RED;ctx.font='bold 17px monospace';ctx.fillText('DECAPITATION',400,122);
   ctx.restore();
  }
  ctx.restore();
