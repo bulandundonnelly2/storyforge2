@@ -10,14 +10,18 @@ export default function Fatality(){
  // The source files are complete concept images, not transparent character sprites.
  // Use their central castle artwork as a stage backdrop while keeping the fighters fully animated.
  const [arena,setArena]=useState(0),arenaImage=useRef<HTMLImageElement|null>(null);
- const sprites=useRef<Record<'barbarian'|'knight'|'fx'|'headless',HTMLImageElement|null>>({barbarian:null,knight:null,fx:null,headless:null});
+ const sprites=useRef<Record<'barbarian'|'knight'|'fx'|'headless'|'wolfRun'|'wolfPounce'|'wolfAttack'|'wolfBite',HTMLImageElement|null>>({barbarian:null,knight:null,fx:null,headless:null,wolfRun:null,wolfPounce:null,wolfAttack:null,wolfBite:null});
  useEffect(()=>{
    let active=true;
    const sources:[keyof typeof sprites.current,string][]=[
      ['barbarian','/assets/fatality-barbarian-sprites.webp'],
      ['knight','/assets/fatality-knight-sprites.webp'],
      ['fx','/assets/fatality-fx-sprites.webp'],
-     ['headless','/assets/fatality-knight-headless-poses.webp']
+     ['headless','/assets/fatality-knight-headless-poses.webp'],
+     ['wolfRun','/assets/fatality-direwolf-run.png'],
+     ['wolfPounce','/assets/fatality-direwolf-pounce.png'],
+     ['wolfAttack','/assets/fatality-direwolf-attack.png'],
+     ['wolfBite','/assets/fatality-direwolf-bite.png']
    ];
    const pending=sources.map(([key,path])=>{
      const image=new Image();
