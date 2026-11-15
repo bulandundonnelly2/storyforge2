@@ -49,9 +49,12 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
  const enemy=w.e.x,dir=w.p.x<enemy?1:-1;
  // Close the gap at contact. The atlas blade should reach the knight's neck,
  // without drawing a second disconnected sword over the existing sword sprite.
- const approach=w.p.x+(enemy-dir*158-w.p.x)*ease((age-22)/65);
- const lunge=42*ease((age-94)/18);
- const hero=Math.max(96,Math.min(704,approach+dir*lunge));
+ // One smooth traveling trajectory from takeoff through impact: no sudden
+ // extra lunge when the character changes its aerial sword pose.
+ const launchX=w.p.x;
+ const impactX=enemy-dir*116;
+ const travel=ease((age-22)/96);
+ const hero=Math.max(96,Math.min(704,launchX+(impactX-launchX)*travel));
  const cut=age>=111;
  ctx.save();
  if(cut){
@@ -77,26 +80,30 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
  // not a stationary sprite flattened by a cosine transform. We show the takeoff,
  // traveling leap, turn, connected horizontal slash, then the landing.
  // The existing 16-frame atlas provides real sword-in-hand attack and side poses.
- const takeoff=34,turnStart=43,turnEnd=105,landing=136;
+ const takeoff=32,turnStart=44,turnEnd=103,landing=145;
  const airPhase=clamp((age-takeoff)/(landing-takeoff));
- const lift=age>=takeoff&&age<landing?61*Math.sin(Math.PI*airPhase):0;
+ // Smooth takeoff and landing tangents, with a slightly longer controlled hang.
+ const lift=age>=takeoff&&age<landing
+   ?64*Math.pow(Math.sin(Math.PI*airPhase),1.25):0;
  const turnProgress=ease((age-turnStart)/(turnEnd-turnStart));
  const spinAngle=(age>=turnStart&&age<turnEnd)?Math.PI*2*turnProgress:0;
  let pose=0;
- if(age>=19&&age<32)pose=6;           // dip low to gather momentum
- else if(age>=32&&age<43)pose=7;      // rise with the sword above the shoulder
+ if(age>=19&&age<32)pose=6;           // gather momentum
+ else if(age>=32&&age<turnStart)pose=7; // takeoff, sword high
  else if(age>=turnStart&&age<turnEnd){
-  // The fighter rotates through distinct profile/guard silhouettes in the air.
-  // Avoid interpolating a flat 2D drawing into a near-zero-width smear.
-  if(turnProgress<.17)pose=3;
-  else if(turnProgress<.33)pose=4;
-  else if(turnProgress<.60)pose=10;
-  else if(turnProgress<.78)pose=4;
+  // More evenly spaced pose beats give the turn a steadier rhythm.
+  if(turnProgress<.15)pose=7;
+  else if(turnProgress<.29)pose=3;
+  else if(turnProgress<.43)pose=4;
+  else if(turnProgress<.58)pose=10;
+  else if(turnProgress<.72)pose=4;
+  else if(turnProgress<.86)pose=3;
   else pose=8;
- }else if(age>=turnEnd&&age<125)pose=9; // flying neck-height chop, hit at 111
- else if(age>=125&&age<landing)pose=8;  // absorb landing and follow through
- else if(age>=landing&&age<154)pose=6;  // plant feet
- else if(age>=154)pose=7;               // still victory silhouette
+ }else if(age>=turnEnd&&age<106)pose=8; // prepare horizontal strike
+ else if(age>=106&&age<125)pose=9;      // flying neck chop; contact at 111
+ else if(age>=125&&age<landing)pose=8;  // follow-through in air
+ else if(age>=landing&&age<155)pose=6;  // controlled landing
+ else if(age>=155)pose=7;              // victory silhouette
  // Ground is the actor's feet position, so the arc lifts the whole body and sword.
  actor('barbarian',pose,hero,346-lift,190,0,1,false,spinAngle);
  if(cut){
