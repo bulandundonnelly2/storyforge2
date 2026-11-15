@@ -10,13 +10,14 @@ export default function Fatality(){
  // The source files are complete concept images, not transparent character sprites.
  // Use their central castle artwork as a stage backdrop while keeping the fighters fully animated.
  const [arena,setArena]=useState(0),arenaImage=useRef<HTMLImageElement|null>(null);
- const sprites=useRef<Record<'barbarian'|'knight'|'fx',HTMLImageElement|null>>({barbarian:null,knight:null,fx:null});
+ const sprites=useRef<Record<'barbarian'|'knight'|'fx'|'headless',HTMLImageElement|null>>({barbarian:null,knight:null,fx:null,headless:null});
  useEffect(()=>{
    let active=true;
    const sources:[keyof typeof sprites.current,string][]=[
      ['barbarian','/assets/fatality-barbarian-sprites.webp'],
      ['knight','/assets/fatality-knight-sprites.webp'],
-     ['fx','/assets/fatality-fx-sprites.webp']
+     ['fx','/assets/fatality-fx-sprites.webp'],
+     ['headless','/assets/fatality-knight-headless-poses.webp']
    ];
    const pending=sources.map(([key,path])=>{
      const image=new Image();
@@ -118,7 +119,8 @@ export default function Fatality(){
  const events=advanceDuel(w,controls);
  if(hasFinisherScene(w)&&w.phase==='fatality'){
    const age=finisherAge(w);
-   if(age===57)playSound({type:'finisherCharge',who:'p'});
+   if(age===(move===0?26:57))playSound({type:'finisherCharge',who:'p'});
+   if(move===0&&(age===137||age===186))playSound({type:'finisherSmash',who:'p'});
    const strikes=move===0?[111]:move===1?[151]:[149];
    if(strikes.includes(age))playSound({type:age===strikes[strikes.length-1]?'finisherFinal':'finisherSmash',who:'p'});
  }
@@ -189,17 +191,18 @@ export default function Fatality(){
    ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
    if(img?.complete&&img.naturalWidth===1024){
     const u=256,sx=(frame%4)*u,sy=Math.floor(frame/4)*u;
-    if(!headless||who!=='knight'){
-      ctx.drawImage(img,sx,sy,u,u,-size/2,-size,size,size);
+    if(headless&&who==='knight'){
+      const pose=sprites.current.headless;
+      if(pose?.complete&&pose.naturalWidth===1024&&pose.naturalHeight===256){
+        // The four 256px cells are original, pre-masked standing/stagger/kneel/collapse poses.
+        const poseIndex=Math.max(0,Math.min(3,frame));
+        ctx.drawImage(pose,poseIndex*256,0,256,256,-size/2,-size,size,size);
+      }else{
+        // Fallback to the existing knight atlas while the dedicated sheet loads.
+        ctx.drawImage(img,sx,sy,u,u,-size/2,-size,size,size);
+      }
     }else{
-      // Preserve armour, shield and weapon while omitting the original helmet.
-      // Four atlas sections leave a clean gap where the head was.
-      const dx=-size/2,dy=-size;
-      const sections:[[number,number,number,number],[number,number,number,number],[number,number,number,number],[number,number,number,number]]=[
-        [0,0,112,256],[179,0,77,256],[112,0,67,16],[112,101,67,155]
-      ];
-      for(const [x,y,sw,sh] of sections)
-        ctx.drawImage(img,sx+x,sy+y,sw,sh,dx+size*x/u,dy+size*y/u,size*sw/u,size*sh/u);
+      ctx.drawImage(img,sx,sy,u,u,-size/2,-size,size,size);
     }
    }else{
     // Keep a visible silhouette on slow connections while atlases load.
