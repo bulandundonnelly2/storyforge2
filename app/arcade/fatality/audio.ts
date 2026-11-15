@@ -28,10 +28,12 @@ export function makeDuelAudio():DuelAudio{
   play:(e)=>{
     if(context.state==='suspended')context.resume().catch(()=>{});
     switch(e.type){
-     case 'swing':rasp(e.strike==='overhead'?.24:.14,.12,e.strike==='low'?440:800);tone(e.strike==='overhead'?100:160,.14,.04,'sawtooth',.44);break;
-     case 'hit':tone(59,.20,.30,'sine',.34);tone(92,.16,.18,'triangle',.40);rasp(.16,.27,350);break;
-     case 'block':tone(280,.19,.13,'square',.7);rasp(.10,.16,2000);break;
-     case 'parry':tone(430,.28,.16,'triangle',1.8);tone(640,.34,.08,'sine',.68);rasp(.09,.23,3700);break;
+     case 'windup':tone(e.strike==='overhead'?73:111,.11,.045,'triangle',.73);break;
+     case 'swing':rasp(e.strike==='overhead'?.31:.23,.20,e.strike==='low'?390:670);tone(e.strike==='overhead'?89:130,.20,.085,'sawtooth',.35);break;
+     case 'hit':tone(e.strike==='overhead'?44:56,.30,.43,'sine',.22);tone(81,.24,.27,'triangle',.31);rasp(.23,.35,285);break;
+     case 'block':tone(215,.24,.19,'square',.56);rasp(.16,.20,1600);break;
+     case 'guardBreak':tone(108,.42,.31,'sawtooth',.29);rasp(.35,.36,1200);tone(51,.32,.24,'triangle',.30);break;
+     case 'parry':tone(420,.34,.20,'triangle',1.6);tone(620,.27,.13,'sine',.72);rasp(.13,.27,2800);break;
      case 'finish':tone(48,1.1,.24,'sawtooth',.4);tone(84,.85,.10,'sine',.55);rasp(.42,.16,210);break;
      case 'finisherCharge':tone(115,.52,.19,'sawtooth',.58);tone(58,.62,.17,'sine',.7);rasp(.3,.11,1500);break;
      case 'finisherSmash':tone(47,.62,.35,'sine',.23);tone(80,.27,.24,'sawtooth',.34);rasp(.31,.30,370);break;
