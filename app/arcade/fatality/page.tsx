@@ -118,9 +118,9 @@ export default function Fatality(){
  const events=advanceDuel(w,controls);
  if(hasFinisherScene(w)&&w.phase==='fatality'){
    const age=finisherAge(w);
-   if(age===67)playSound({type:'finisherCharge',who:'p'});
-   if(age===(move===0?101:move===1?119:132)||age===(move===0?146:move===1?160:165))playSound({type:'finisherSmash',who:'p'});
-   if(age===(move===0?183:move===1?192:196))playSound({type:'finisherFinal',who:'p'});
+   if(age===57)playSound({type:'finisherCharge',who:'p'});
+   const strikes=move===0?[93,120,148]:move===1?[151]:[149];
+   if(strikes.includes(age))playSound({type:age===strikes[strikes.length-1]?'finisherFinal':'finisherSmash',who:'p'});
  }
  for(const event of events){
    playSound(event);
@@ -175,11 +175,33 @@ export default function Fatality(){
  ctx.fillText('BARBARIAN',25,47);ctx.textAlign='right';ctx.fillText('SKELETAL KNIGHT',775,47);
  ctx.textAlign='center';ctx.font='bold 27px monospace';ctx.fillText(String(Math.max(0,99-Math.floor(w.time/60))),400,34);ctx.textAlign='left';
  rect(25,54,290,5,'#26232c');rect(485,54,290,5,'#26232c');rect(25,54,290*w.p.stamina/100,5,'#c9b8a1');rect(485,54,290*w.e.stamina/100,5,'#c9b8a1');
- if(hasFinisherScene(w))drawFinisherBackdrop(ctx,w);
- fighterSprite(w.p);
- if(w.phase!=='fatality'||finisherAge(w)<179)fighterSprite(w.e,true);
- if(hasFinisherScene(w))drawFinisherSequence(ctx,w,move,renderSpriteEffect);
- else if(w.fx>0){const n=w.impactKind==='parry'?6:w.impactKind==='block'?6:w.fx>12?1:w.fx>7?2:3;renderSpriteEffect(n,w.impactX,w.impactY,105)}
+ if(hasFinisherScene(w)){
+  drawFinisherBackdrop(ctx,w);
+  // Draw each fighter exactly once, using the selected atlas frame and staging position.
+  // Portraits never float over the arena or duplicate already-rendered combat sprites.
+  drawFinisherSequence(ctx,w,move,(who,frame,x,ground,size,rotation,alpha)=>{
+   const img=sprites.current[who==='barbarian'?'barbarian':'knight'];
+   const f=who==='barbarian'?w.p:w.e;
+   ctx.save();
+   ctx.translate(Math.round(x),Math.round(ground));
+   ctx.rotate(rotation);
+   ctx.scale(f.face,1);
+   ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+   if(img?.complete&&img.naturalWidth===1024){
+    const u=256;ctx.drawImage(img,(frame%4)*u,Math.floor(frame/4)*u,u,u,-size/2,-size,size,size);
+   }else{
+    // Keep a visible silhouette on slow connections while atlases load.
+    ctx.fillStyle=who==='barbarian'?'#eee6db':'#bcbbc1';
+    ctx.fillRect(-29,-117,58,103);
+    ctx.fillStyle='#e02042';ctx.fillRect(-39,-40,78,10);
+   }
+   ctx.restore();
+  });
+ }else{
+  fighterSprite(w.p);
+  fighterSprite(w.e,true);
+  if(w.fx>0){const n=w.impactKind==='parry'?6:w.impactKind==='block'?6:w.fx>12?1:w.fx>7?2:3;renderSpriteEffect(n,w.impactX,w.impactY,105)}
+ }
  if(w.phase==='finish'){ctx.textAlign='center';ctx.font='bold 31px monospace';ctx.fillStyle=w.frame%25<18?'#f33':'#fff';ctx.fillText('FINISH HIM!',400,182);ctx.textAlign='left'}
  if(w.phase==='lose'||(w.phase==='win'&&!w.finisherDone)){ctx.textAlign='center';ctx.font='bold 34px monospace';ctx.fillStyle='#fff';ctx.fillText(w.phase==='win'?'YOU WIN':'YOU LOSE',400,189);ctx.textAlign='left'}ctx.restore();raf=requestAnimationFrame(draw)};raf=requestAnimationFrame(draw);return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[move,round,soundOn]);
  const button=(label:string,key:string)=><button onPointerDown={e=>{e.preventDefault();press(key);if(e.currentTarget.setPointerCapture)e.currentTarget.setPointerCapture(e.pointerId)}} onPointerUp={()=>held.current.delete(key)} onPointerCancel={()=>held.current.delete(key)} onPointerLeave={()=>held.current.delete(key)} style={{background:'#24131c',border:'2px solid #d82b49',color:'#fff',padding:'13px 14px',font:'bold 14px monospace',touchAction:'none',cursor:'pointer'}}>{label}</button>;

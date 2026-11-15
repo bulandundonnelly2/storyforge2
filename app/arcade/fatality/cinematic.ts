@@ -1,52 +1,42 @@
-// Original, high-contrast 8-bit finisher cinematics for Fatality Forge.
-// Screen staging, pixels and effects are procedural; the existing sprites stay intact.
+// Original, legible 8-bit cinematic finishers: pause, one focused action, aftermath.
+// Palette is deliberately restricted to black, off-white and blood-red.
 import type {World} from './combat';
-
 export const FINISHER_FRAMES=246;
 export const FINISHER_NAMES=['SWORD STORM','HELLFIRE','SKULL CRUSH'] as const;
-
-function pixel(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,color:string){
+export type CinematicActor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number)=>void;
+const BLACK='#050406',WHITE='#f3eee7',RED='#e02042',DARKRED='#8b0e29';
+const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
+const ease=(v:number)=>{const t=clamp(v);return t*t*(3-2*t)};
+function box(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,color:string){
  ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)));
 }
-function clamp(v:number,min=0,max=1){return Math.max(min,Math.min(max,v))}
-function slash(ctx:CanvasRenderingContext2D,x1:number,y1:number,x2:number,y2:number,color:string,size=5){
- const steps=36;
- for(let i=0;i<=steps;i++){
-  const x=x1+(x2-x1)*i/steps,y=y1+(y2-y1)*i/steps;
-  pixel(ctx,x,y,size+(i%5===0?5:0),size,color);
- }
+function stroke(ctx:CanvasRenderingContext2D,x1:number,y1:number,x2:number,y2:number,width:number,color:string){
+ const steps=Math.max(2,Math.round(Math.hypot(x2-x1,y2-y1)/4));
+ for(let i=0;i<=steps;i++){const t=i/steps;box(ctx,x1+(x2-x1)*t,y1+(y2-y1)*t,width,width,color)}
 }
 function ring(ctx:CanvasRenderingContext2D,x:number,y:number,r:number,color:string){
- for(let i=0;i<48;i++){
-  const theta=i*Math.PI/24;
-  pixel(ctx,x+Math.cos(theta)*r,y+Math.sin(theta)*r*.60,5,4,color);
+ const steps=38;
+ for(let i=0;i<steps;i++){
+  const theta=i/steps*Math.PI*2;
+  box(ctx,x+Math.cos(theta)*r,y+Math.sin(theta)*r*.55,5,5,color);
  }
 }
-function splinters(ctx:CanvasRenderingContext2D,x:number,y:number,t:number,move:number){
- const distance=Math.max(0,t-83);
- for(let i=0;i<65;i++){
-  const angle=(i*2.39996)+move*.35;
-  const speed=1.5+(i%9)*.48;
-  const outward=clamp(distance,0,60)*speed;
-  const px=x+Math.cos(angle)*outward;
-  const py=y+Math.sin(angle)*outward*.68+Math.max(0,distance-28)*.24;
-  if(px<15||px>785||py<76||py>338)continue;
-  pixel(ctx,px,py,i%4===0?7:3,i%6===0?5:3,i%6===0?'#f5f0e8':i%3===0?'#970d28':'#fa173a');
- }
+function skull(ctx:CanvasRenderingContext2D,cx:number,cy:number,scale:number){
+ // A tiny original tiled skull: kept away from the fighters for a clean silhouette.
+ const bits=['  XXXXXXXX  ',' XXXXXXXXXX ','XXXXXXXXXXXX','XXX XX XX XX','XXX XX XX XX','XXXXXXXXXXXX',' XXXX  XXXX ','  X X  X X  ','  XXXXXXXX  '];
+ const x=cx-bits[0].length*scale/2,y=cy-bits.length*scale/2;
+ for(let row=0;row<bits.length;row++)for(let col=0;col<bits[row].length;col++)
+  if(bits[row][col]==='X')box(ctx,x+col*scale,y+row*scale,scale,scale,row<6?WHITE:RED);
 }
-function skullSigil(ctx:CanvasRenderingContext2D,x:number,y:number,scale:number){
- const glyph=[
-  '  XXXXXXXX  ',
-  ' XXXXXXXXXX ',
-  'XXX XX XX XX',
-  'XXX XX XX XX',
-  'XXXXXXXXXXXX',
-  ' XXXX  XXXX ',
-  '  X X  X X  ',
-  '  XXXXXXXX  ',
-  '   X X X X  '
- ];
- glyph.forEach((line,row)=>{for(let col=0;col<line.length;col++)if(line[col]==='X')pixel(ctx,x+col*scale,y+row*scale,scale,scale,row<6?'#e8203c':'#f1f0e8')});
+function impact(ctx:CanvasRenderingContext2D,x:number,y:number,age:number,at:number){
+ const dt=age-at;if(dt<0||dt>=17)return;
+ if(dt<2)box(ctx,0,0,800,390,'rgba(243,238,231,'+(dt===0?'.70':'.26')+')');
+ ring(ctx,x,y,dt*7+12,dt<8?WHITE:RED);
+ // Just eight large, readable pixels, not a cloud of random sparks.
+ for(let i=0;i<8;i++){
+  const a=i*Math.PI/4;
+  box(ctx,x+Math.cos(a)*(20+dt*5),y+Math.sin(a)*(14+dt*3),dt<7?8:4,dt<7?8:4,i%3?RED:WHITE);
+ }
 }
 export function finisherAge(w:World):number{
  return w.phase==='win'&&w.finisherDone?FINISHER_FRAMES:clamp(FINISHER_FRAMES-w.fx,0,FINISHER_FRAMES);
@@ -54,112 +44,95 @@ export function finisherAge(w:World):number{
 export function hasFinisherScene(w:World){return Boolean(w.finisherDone)&&(w.phase==='fatality'||w.phase==='win')}
 export function drawFinisherBackdrop(ctx:CanvasRenderingContext2D,w:World){
  if(!hasFinisherScene(w))return;
- const age=finisherAge(w);
+ const age=finisherAge(w),fade=ease(age/34);
  ctx.save();
- // Fade to near-black in the first half-second, keeping the white fighters readable.
- const darkness=.15+.80*clamp(age/38);
- pixel(ctx,0,57,800,333,'rgba(0,0,0,'+darkness.toFixed(3)+')');
- const x=w.e.x;
- if(age>=23){
-  // Ritual red backlight / blood moon, drawn with hard-edged Spectrum pixels.
-  for(let row=0;row<17;row++){
-   const yy=89+row*9,halfWidth=Math.sqrt(Math.max(0,1-Math.pow((row-8)/9,2)))*92;
-   const glint=age<65?(age-23)/42:1;
-   pixel(ctx,x-halfWidth,yy,halfWidth*2,6,'rgba(137,9,30,'+(glint*.66).toFixed(3)+')');
+ // Darken the entire game including normal HUD: fatalities have their own stage.
+ box(ctx,0,0,800,390,'rgba(0,0,0,'+(.25+.75*fade).toFixed(3)+')');
+ if(age>=28){
+  box(ctx,0,0,800,390,BLACK);
+  // Single muted red moon and one horizon line. Never copy the reference art or HUD.
+  const x=Math.round((w.p.x+w.e.x)/2);
+  for(let row=-9;row<=9;row++){
+   const half=Math.floor(Math.sqrt(Math.max(0,1-row*row/100))*70/8)*8;
+   box(ctx,x-half,137+row*6,half*2,5,DARKRED);
   }
-  pixel(ctx,0,325,800,4,'#891026');
-  pixel(ctx,0,329,800,4,'#16040a');
-  // Red pools of light beneath the combatants, not detailed gore.
-  for(let i=0;i<9;i++)pixel(ctx,x-66+i*14,332,7+(i%3)*5,3,'#b30b31');
+  box(ctx,0,337,800,5,RED);
+  box(ctx,0,344,800,46,'#10060b');
  }
- // Letterbox bands make the sequence a distinct cutscene.
- pixel(ctx,0,57,800,age<28?Math.round(age*.46):14,'#010103');
- pixel(ctx,0,382-Math.min(14,age*.46),800,14,'#010103');
+ // Slim cinematic letterbox, no HUD or overlapping floating labels.
+ box(ctx,0,0,800,40,BLACK);box(ctx,0,377,800,13,BLACK);
  ctx.restore();
 }
-export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,drawSprite:(frame:number,x:number,y:number,size?:number)=>void){
+export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,actor:CinematicActor){
  if(!hasFinisherScene(w))return;
- const age=finisherAge(w),x=w.e.x,y=217;
+ const age=finisherAge(w);
+ const face=w.p.face||1,enemyX=w.e.x;
+ const idealX=clamp(enemyX-face*160,110,690);
+ const attackerX=w.p.x+(idealX-w.p.x)*ease((age-16)/46);
+ const opponentRecoil=move===0?Math.max(0,Math.min(20,(age-89)*.4)):0;
+ const opponentX=enemyX+face*opponentRecoil;
+ const finalBlow=move===0?148:move===1?162:149;
+ const fall=ease((age-finalBlow)/25);
+ const fade=move===1?1-ease((age-165)/28):1;
+ const attackerStrike=move===0?[88,115,143].some(at=>age>=at-10&&age<at+12):move===1?age>=92&&age<150:age>=126&&age<154;
+ const attackerFrame=age<60?0:attackerStrike?move===2?11:move===1?10:9:age>finalBlow?10:8;
+ const enemyFrame=age<60?12:fall>0?15:13;
  ctx.save();
- const heartbeat=[82,120,168,200];
- // Wind-up: stark white blade and restrained warning typography.
- if(age>30&&age<82){
-  const glimmer=age%18<7;
-  if(glimmer)slash(ctx,w.p.x+20,201,x-34,158,'#f6f0e4',3);
-  if(age%22<12)pixel(ctx,x-63,140,126,3,'#e32441');
- }
- // Each selectable finishing style has a distinct readable, original animation.
- if(age>=72&&age<=208){
-  if(move===0){ // Sword Storm: successive monumental blade cuts and bursts of 8-bit sparks.
-   for(let strike=0;strike<4;strike++){
-    const onset=79+strike*27,delta=age-onset;
-    if(delta>=0&&delta<26){
-     const alpha=1-delta/27;
-     const tilt=strike%2?-1:1;
-     const sx=x-105+delta*5,sy=126+(strike%3)*31;
-     slash(ctx,sx,sy,x+75-delta*1.5,sy+tilt*95,'#f5efe4',delta<8?7:4);
-     if(delta<15)slash(ctx,sx+7,sy+5,x+84-delta*1.5,sy+tilt*96,'rgba(238,18,55,'+alpha.toFixed(3)+')',4);
-     drawSprite(strike%2?5:6,x,210,110+Math.round((1-alpha)*18));
-    }
-   }
-  }else if(move===1){ // Hellfire: flickering flame columns and searing floor cracks.
-   const height=clamp((age-72)/45)*160;
-   for(let i=0;i<17;i++){
-    const off=(i-8)*13,wiggle=Math.sin((age+i*13)*.19)*8;
-    const h=height*(.52+(i%5)*.13);
-    pixel(ctx,x+off+wiggle,330-h,7+(i%3)*3,h,i%3===0?'#f7e7d9':i%2===0?'#ea1b3c':'#9e092c');
-    if(i%4===0)pixel(ctx,x+off+wiggle,330-h-17,5,12,'#fa4351');
-   }
-   for(let i=0;i<22;i++)pixel(ctx,x-135+i*12,329-((age+i*7)%11),7,3,'#f0203d');
-   drawSprite(9,x,246,150);
-  }else{ // Skull Crush: enormous spectral omen followed by a seismic impact.
-   if(age<150){
-    skullSigil(ctx,x-75,83,12);
-    const rr=65+Math.sin(age*.20)*14;
-    ring(ctx,x,174,rr,'#c90d30');
-   }
-   if(age>=128){
-    const rr=(age-128)*5;
-    if(rr<240){ring(ctx,x,245,rr,'#f2e9e4');ring(ctx,x,245,rr*.82,'#e91e43')}
-    for(let i=0;i<24;i++){
-     const xx=x-140+i*12;
-     pixel(ctx,xx,325-Math.abs(Math.sin(i*3.2+age*.08))*((age-128)%48),7,7,i%3?'#bd1332':'#f8efe6');
-    }
-    drawSprite(11,x,224,145);
-   }
-  }
- }
- // Three separate impact peaks: white strobe, shock wave and heavy pixel fragments.
- const impactTimes=move===0?[101,146,183]:move===1?[119,160,192]:[132,165,196];
- for(const [index,impact] of impactTimes.entries()){
-  const delta=age-impact;
-  if(delta>=0&&delta<24){
-   if(delta<3)pixel(ctx,0,57,800,333,'rgba(255,246,240,'+(index===2?.64:.40)*(1-delta/3)+')');
-   const radius=delta*6;
-   ring(ctx,x,213,radius,index===2?'#f7f0e7':'#e92546');
-   for(let p=0;p<25;p++){
-    const angle=p*6.283/25;
-    pixel(ctx,x+Math.cos(angle)*radius,y+Math.sin(angle)*radius*.68,4,4,p%3?'#eb2140':'#fff3e6');
-   }
-  }
- }
- if(age>=91&&age<216)splinters(ctx,x,217,age,move);
- if(age>=172){
-  for(let i=0;i<34;i++){
-   const px=x-120+((i*47)%239),fall=((i*29+age*(2+i%4))%198);
-   pixel(ctx,px,84+fall,2+i%3,4+i%5,i%5?'#b90c2d':'#f4eee4');
-  }
- }
- if(age>=205){
-  const panelOpacity=clamp((age-205)/12);
-  pixel(ctx,132,108,536,115,'rgba(0,0,0,'+(panelOpacity*.89).toFixed(3)+')');
-  ctx.textAlign='center';
-  ctx.font='bold 54px monospace';
-  ctx.fillStyle=age%12<8?'#f2ede5':'#d51b3f';
-  ctx.fillText('FATALITY',400,164);
-  ctx.font='bold 19px monospace';ctx.fillStyle='#f03b54';
-  ctx.fillText(['SWORD STORM','HELLFIRE','SKULL CRUSH'][move]??'FINISHER',400,196);
+ // Opponent collapses only after the actual blow. A single readable pose.
+ if(fade>.03)actor('knight',enemyFrame,opponentX+face*fall*36,346,184,face*fall*.9,fade);
+ actor('barbarian',attackerFrame,attackerX,346,188,0,1);
+ if(age>=56&&age<74){
+  // A single omen before the fatality, then clear the screen.
+  box(ctx,268,62,264,3,RED);
+  ctx.textAlign='center';ctx.font='bold 19px monospace';ctx.fillStyle=WHITE;
+  ctx.fillText('FINAL STRIKE',400,86);
   ctx.textAlign='left';
+ }
+ if(move===0){
+  // Three timed cuts, never more than one sword arc at once.
+  for(const [i,at] of [88,115,143].entries()){
+   const dt=age-at;if(dt>=0&&dt<13){
+    const x=enemyX-face*55,top=i%2?263:143,bottom=i%2?135:274;
+    stroke(ctx,x-face*52,top,x+face*70,bottom,dt<4?9:5,dt<7?WHITE:RED);
+    if(dt<9)box(ctx,x+face*75,Math.min(top,bottom)+65,9,9,RED);
+   }
+   impact(ctx,enemyX,208,age,at+5);
+  }
+ }else if(move===1){
+  // Hellfire rises once and subsides; no particles over the sword silhouettes.
+  if(age>=88&&age<=193){
+   const amount=ease((age-88)/40)*(1-ease((age-165)/30));
+   for(let i=0;i<7;i++){
+    const x=enemyX+(i-3)*19;
+    const h=amount*(72+(i%3)*27+Math.sin(age*.17+i)*9);
+    if(h>2){
+     box(ctx,x,337-h,11,h,i%2?RED:DARKRED);
+     if(i%3===0)box(ctx,x+3,337-h+13,4,h*.67,WHITE);
+    }
+   }
+  }
+  impact(ctx,enemyX,245,age,151);
+ }else{
+  // Skull omen approaches, one vertical crushing shockwave, then silence.
+  if(age>=74&&age<142){
+   const downward=ease((age-112)/30)*70;
+   skull(ctx,enemyX,116+downward,age<112?5:6);
+  }
+  if(age>=143&&age<159){
+   const dt=age-143;
+   box(ctx,enemyX-91,137+dt*9,182,7,dt<5?WHITE:RED);
+  }
+  impact(ctx,enemyX,235,age,149);
+ }
+ // Empty aftermath beat: the title only appears once the opponent has fallen.
+ if(age>=211){
+  const reveal=ease((age-211)/14);
+  box(ctx,171,91,458,121,'rgba(0,0,0,'+(.92*reveal).toFixed(3)+')');
+  ctx.save();ctx.globalAlpha=reveal;ctx.textAlign='center';
+  ctx.fillStyle=WHITE;ctx.font='bold 57px monospace';ctx.fillText('FATALITY',400,158);
+  ctx.fillStyle=RED;ctx.font='bold 20px monospace';
+  ctx.fillText(FINISHER_NAMES[move]??'FINISHER',400,192);
+  ctx.restore();
  }
  ctx.restore();
 }
