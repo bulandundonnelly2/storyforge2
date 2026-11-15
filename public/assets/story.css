@@ -424,3 +424,10 @@ body:has(.novel-screen) .sf-artwork-only .novel-next{display:none!important}
 .crimson-novel .novel-ending{color:#fff}
 .crimson-novel button{font-family:"Courier New",monospace}
 .crimson-novel .novel-story-text,.crimson-novel .novel-text,.crimson-novel .novel-dialogue{color:#fff}
+
+/* The Hollow Bell: authentic 3-colour ZX Spectrum scene artwork, no colour wash or soft zoom. */
+.hollow-bell-card-img{object-position:center top;image-rendering:pixelated}
+.hollow-bell-novel .novel-stage{background:#030304}
+.hollow-bell-novel .novel-scenery{inset:0;background:var(--scene-image) center var(--hollow-scene-y,0%) / 100% 300% no-repeat;image-rendering:pixelated;animation:none}
+.hollow-bell-novel .novel-light{background:linear-gradient(0deg,rgba(0,0,0,.36),transparent 55%);animation:none}
+.hollow-bell-novel .novel-atmosphere,.hollow-bell-novel .novel-particles{display:none}
