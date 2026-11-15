@@ -10,13 +10,6 @@ const ease=(n:number)=>{const x=clamp(n);return x*x*(3-2*x)};
 function block(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,color:string){
  ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)));
 }
-function blade(ctx:CanvasRenderingContext2D,x1:number,y1:number,x2:number,y2:number,width:number){
- const steps=Math.max(10,Math.ceil(Math.hypot(x2-x1,y2-y1)/3));
- for(let i=0;i<=steps;i++){
-  const u=i/steps;
-  block(ctx,x1+(x2-x1)*u,y1+(y2-y1)*u,width,width,WHITE);
- }
-}
 // RED WATER: three large, continuous arcade fountains, never particle noise.
 // Each thick arch starts at the moving knight's neck and visibly lands at the feet.
 // Three broad and continuous red-water fountains, with no random droplets or sparks.
@@ -55,7 +48,11 @@ function redWater(ctx:CanvasRenderingContext2D,x:number,y:number,dir:number,age:
 }
 export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number,actor:Actor,helmet?:Helmet){
  const enemy=w.e.x,dir=w.p.x<enemy?1:-1;
- const hero=w.p.x+(enemy-dir*167-w.p.x)*ease((age-22)/65);
+ // Close the gap at contact. The atlas blade should reach the knight's neck,
+ // without drawing a second disconnected sword over the existing sword sprite.
+ const approach=w.p.x+(enemy-dir*158-w.p.x)*ease((age-22)/65);
+ const lunge=42*ease((age-94)/18);
+ const hero=Math.max(96,Math.min(704,approach+dir*lunge));
  const cut=age>=111;
  ctx.save();
  if(cut){
@@ -77,16 +74,19 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
   const slump=ease((age-192)/24);
   actor('knight',3,enemy+dir*(10+slump*22),348+slump*3,184,dir*slump*.08,1,true);
  }
- // A readable sword flourish: pose changes, no long animated streaks.
- const pose=age<24?0:age<43?8:age<65?10:age<87?8:age<99?10:age<120?9:age<177?10:0;
+ // These source atlas poses contain the actual sword, correctly attached to the
+ // fighter's hand: 7 = upright blade, 10 = overhead, 8 = drawn back,
+ // 9 = horizontal neck-height attack. Do not paint additional floating blade lines.
+ let pose=0;
+ if(age>=23&&age<42)pose=7;           // draw sword high
+ else if(age>=42&&age<59)pose=10;    // start short flourish
+ else if(age>=59&&age<77)pose=8;     // rotate to rear guard
+ else if(age>=77&&age<94)pose=10;    // finish the sword twirl overhead
+ else if(age>=94&&age<106)pose=8;    // wind up for the one decisive swing
+ else if(age>=106&&age<123)pose=9;   // connected sword strike, contact at 111
+ else if(age>=123&&age<144)pose=8;   // follow through and recover
+ else if(age>=144&&age<180)pose=7;   // composed victor posture
  actor('barbarian',pose,hero,346,190,0,1);
- // One restrained glint during the twirl, then ONE neck-height finishing stroke.
- if(age>=101&&age<=113){
-  const u=(age-101)/12;
-  blade(ctx,hero+dir*53,204-17*u,enemy+dir*(9+19*u),199+4*u,age<109?7:4);
- }
- // A tiny clean contact flash rather than a full-screen strobe.
- if(age===111)block(ctx,enemy-dir*10,193,29,8,WHITE);
  if(cut){
   if(helmet){
    const flight=clamp((age-111)/63);
