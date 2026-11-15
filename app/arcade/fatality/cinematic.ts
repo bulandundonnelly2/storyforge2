@@ -3,6 +3,7 @@
 import type {World} from './combat';
 import {drawDecapitation} from './decapitation';
 import {drawDireWolfFinisher} from './direwolf';
+import type {DireWolfSprite} from './direwolf';
 export const FINISHER_FRAMES=246;
 export const FINISHER_NAMES=['DECAPITATION','HELLFIRE','DIRE WOLF'] as const;
 export type CinematicActor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean,spin?:number)=>void;
@@ -118,10 +119,10 @@ export function drawFinisherBackdrop(ctx:CanvasRenderingContext2D,w:World){
  box(ctx,0,0,800,40,BLACK);box(ctx,0,377,800,13,BLACK);
  ctx.restore();
 }
-export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,actor:CinematicActor,helmet?:CinematicHelmet){
+export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,actor:CinematicActor,helmet?:CinematicHelmet,wolfSprite?:DireWolfSprite){
  if(!hasFinisherScene(w))return;
  if(move===0){drawDecapitation(ctx,w,finisherAge(w),actor,helmet);return}
- if(move===2){drawDireWolfFinisher(ctx,w,finisherAge(w),actor);return}
+ if(move===2){drawDireWolfFinisher(ctx,w,finisherAge(w),actor,wolfSprite);return}
  const age=finisherAge(w);
  const face=w.p.face||1,enemyX=w.e.x;
  const idealX=clamp(enemyX-face*160,110,690);
