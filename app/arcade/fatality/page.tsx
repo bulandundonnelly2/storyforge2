@@ -221,41 +221,40 @@ export default function Fatality(){
    ctx.save();
    ctx.translate(Math.round(x),Math.round(y));
    ctx.rotate(rotation);
-   const p=size/16;
+   // Compact, irregular 20x20 bone sprite with deliberate hand-pixelled
+   // shading, cheekbones, nasal opening, jaw, teeth and dark socket detail.
    const skull=[
-     '.....XXXXXX.....',
-     '...XXXXXXXXXX...',
-     '..XXXXXXXXXXXX..',
-     '.XXXXXXXXXXXXXX.',
-     '.XXXXXXXXXXXXXX.',
-     '.XXX...XX...XXX.',
-     '.XX....XX....XX.',
-     '.XXX...XX...XXX.',
-     '.XXXXXXXXXXXXXX.',
-     '..XXXXXXXXXXXX..',
-     '..XXXX.XX.XXXX..',
-     '...XXXXXXXXXX...',
-     '....XXXXXXXX....',
-     '.....XXXXXX.....',
-     '.....X.X.X......',
-     '......XXX.......'
+    '......BBBBBBBB......',
+    '....BBWWWWWWWWBB....',
+    '...BWWWWWWWWWWWWB...',
+    '..BWWWWWWWWWWWWWWB..',
+    '..BWWWWWWWWWWWWWWB..',
+    '.BWWWWWWWWWWWWWWWWB.',
+    '.BWWKKKWWWWKKKWWWWB.',
+    '.BWWKKKKWWKKKKWWWWB.',
+    '.BWWKKKKWWKKKKWWWWB.',
+    '..BWWKKWWWWKKWWWWB..',
+    '..BWWWWWWKKWWWWWWB..',
+    '...BWWWWKKWWWWWWB...',
+    '....BWWWWWWWWWWB....',
+    '....BWWKWWWWKWWB....',
+    '.....BWWWWWWWWB.....',
+    '.....BWBWBWBWB......',
+    '......WWWWWWWW......',
+    '......BWBWBWBW......',
+    '.......BBBBBB.......',
+    '....................'
    ];
+   const step=size/20;
+   const palette:Record<string,string>={W:'#f2e9dc',B:'#aa9e92',K:'#050406'};
    for(let row=0;row<skull.length;row++){
-    for(let col=0;col<16;col++){
-     if(skull[row][col]==='X'){
-      ctx.fillStyle=(row>=13?'#e5ddd2':row===0||col===1||col===14?'#c3b9af':'#f3eee7');
-      ctx.fillRect(Math.round((col-8)*p),Math.round((row-8)*p),Math.ceil(p),Math.ceil(p));
+    for(let col=0;col<skull[row].length;col++){
+     const c=skull[row][col];
+     if(c!=='.'){
+      ctx.fillStyle=palette[c];
+      ctx.fillRect(Math.round((col-10)*step),Math.round((row-10)*step),Math.ceil(step),Math.ceil(step));
      }
     }
-   }
-   // Dark recessed eye sockets and nasal cavity make it unmistakably a skull.
-   ctx.fillStyle='#050406';
-   ctx.fillRect(Math.round(-5*p),Math.round(-2*p),Math.ceil(3*p),Math.ceil(3*p));
-   ctx.fillRect(Math.round(2*p),Math.round(-2*p),Math.ceil(3*p),Math.ceil(3*p));
-   ctx.fillRect(Math.round(-p),Math.round(2*p),Math.ceil(2*p),Math.ceil(2*p));
-   // Teeth: alternate dark gaps rather than adding armour or a helmet.
-   for(const ix of [-3,-1,1,3]){
-    ctx.fillRect(Math.round(ix*p),Math.round(5*p),Math.ceil(p*.7),Math.ceil(p));
    }
    ctx.restore();
   });
