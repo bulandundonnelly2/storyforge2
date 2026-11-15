@@ -4,7 +4,7 @@ import {createDuel,advanceDuel,ATTACKS,type Fighter,type World,type Strike,type 
 import {makeDuelAudio,type DuelAudio} from './audio';
 import {makeSpectrumMusic,type SpectrumMusic} from './music';
 import {FINISHER_FRAMES,finisherAge,hasFinisherScene,drawFinisherBackdrop,drawFinisherSequence} from './cinematic';
-const moves=['DECAPITATION','HELLFIRE','SKULL CRUSH'];
+const moves=['DECAPITATION','HELLFIRE','DIRE WOLF'];
 export default function Fatality(){
  const canvas=useRef<HTMLCanvasElement>(null),world=useRef<World|null>(null),held=useRef(new Set<string>()),queued=useRef<Strike|null>(null),audio=useRef<DuelAudio|null>(null),music=useRef<SpectrumMusic|null>(null),[musicOn,setMusicOn]=useState(true),[soundOn,setSoundOn]=useState(true),[phase,setPhase]=useState('fight'),[move,setMove]=useState(0),[message,setMessage]=useState('FIGHT!'),[score,setScore]=useState(0),[round,setRound]=useState(1);
  // The source files are complete concept images, not transparent character sprites.
@@ -119,9 +119,10 @@ export default function Fatality(){
  const events=advanceDuel(w,controls);
  if(hasFinisherScene(w)&&w.phase==='fatality'){
    const age=finisherAge(w);
-   if(age===(move===0?26:57))playSound({type:'finisherCharge',who:'p'});
+   if(age===(move===0?26:move===2?68:57))playSound({type:move===2?'wolfGrowl':'finisherCharge',who:'p'});
    if(move===0&&(age===137||age===186))playSound({type:'finisherSmash',who:'p'});
-   const strikes=move===0?[111]:move===1?[151]:[149];
+   if(move===2&&(age===117||age===143||age===167))playSound({type:'wolfBite',who:'p'});
+   const strikes=move===0?[111]:move===1?[151]:move===2?[111]:[149];
    if(strikes.includes(age))playSound({type:age===strikes[strikes.length-1]?'finisherFinal':'finisherSmash',who:'p'});
  }
  for(const event of events){
