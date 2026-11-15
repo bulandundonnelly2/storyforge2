@@ -193,6 +193,8 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   const visibility=1-changing;
   if(visibility>.01)actor('knight',age<28?0:8,knightX,346,190-78*changing,0,visibility);
  }
+ // Keep all red-water jets behind the original fighter sprites.
+ if(age>=124)redWater(ctx,heroBase+face*17,264,face,age);
  if(age<130){
   actor('barbarian',age<105?13:12,heroBase,346,189,0,1);
  }else if(age<184){
@@ -202,8 +204,6 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   const alpha=1-ease((age-142)/35);
   if(alpha>.02)actor('barbarian',15,moved,346+9*bitten,size,face*.12*bitten,alpha);
  }
- // Red water is behind the creatures. It persists as a broad pixel pool.
- if(age>=124)redWater(ctx,heroBase+face*17,264,face,age);
  if(age>=30)serpent(ctx,knightX,338,face,age,stage,grown);
  if(age>=185){
   // Small, legible remains, rather than overlapping full-body sprites.
