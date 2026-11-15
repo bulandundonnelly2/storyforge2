@@ -29,7 +29,7 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
  // One unmistakable horizontal sword swipe, then a flash at the precise hit frame.
  if(age>=97&&age<118){
   const dt=age-97;
-  slash(ctx,hero+dir*48,age<107?157:188,enemy+dir*40,age<107?161:208,dt<9?8:4,dt<14?WHITE:RED);
+  slash(ctx,hero+dir*48,age<107?157:188,enemy+dir*40,age<107?161:208,dt<14?WHITE:RED,dt<9?8:4);
  }
  if(age>=111&&age<127){
   const dt=age-111;
