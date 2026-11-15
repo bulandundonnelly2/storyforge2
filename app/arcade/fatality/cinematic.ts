@@ -1,9 +1,11 @@
 // Original, legible 8-bit cinematic finishers: pause, one focused action, aftermath.
 // Palette is deliberately restricted to black, off-white and blood-red.
 import type {World} from './combat';
+import {drawDecapitation} from './decapitation';
 export const FINISHER_FRAMES=246;
-export const FINISHER_NAMES=['SWORD STORM','HELLFIRE','SKULL CRUSH'] as const;
-export type CinematicActor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number)=>void;
+export const FINISHER_NAMES=['DECAPITATION','HELLFIRE','SKULL CRUSH'] as const;
+export type CinematicActor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean)=>void;
+export type CinematicHelmet=(x:number,y:number,rotation:number,size:number)=>void;
 const BLACK='#050406',WHITE='#f3eee7',RED='#e02042',DARKRED='#8b0e29';
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
 const ease=(v:number)=>{const t=clamp(v);return t*t*(3-2*t)};
@@ -63,8 +65,9 @@ export function drawFinisherBackdrop(ctx:CanvasRenderingContext2D,w:World){
  box(ctx,0,0,800,40,BLACK);box(ctx,0,377,800,13,BLACK);
  ctx.restore();
 }
-export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,actor:CinematicActor){
+export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,actor:CinematicActor,helmet?:CinematicHelmet){
  if(!hasFinisherScene(w))return;
+ if(move===0){drawDecapitation(ctx,w,finisherAge(w),actor,helmet);return}
  const age=finisherAge(w);
  const face=w.p.face||1,enemyX=w.e.x;
  const idealX=clamp(enemyX-face*160,110,690);
