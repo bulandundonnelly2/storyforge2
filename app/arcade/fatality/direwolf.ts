@@ -4,6 +4,7 @@ import type {World} from './combat';
 import {drawDetailedDireWolf} from './direwolf-art';
 
 type Actor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean,spin?:number)=>void;
+export type WolfSpritePainter=(ctx:CanvasRenderingContext2D,x:number,y:number,face:number,age:number,motion:'run'|'pounce'|'feed'|'snarl')=>boolean;
 const WHITE='#eee9e2',BONE='#bbb3ac',BLACK='#07060a',INK='#1b1920';
 const RED='#e02042',BLOOD='#940e2b';
 const CELL=4;
@@ -52,7 +53,7 @@ function aftermath(ctx:CanvasRenderingContext2D,cx:number,age:number){
   pix(ctx,cx+37,330,10,4,BONE);
  }
 }
-export function drawDireWolfFinisher(ctx:CanvasRenderingContext2D,w:World,age:number,actor:Actor){
+export function drawDireWolfFinisher(ctx:CanvasRenderingContext2D,w:World,age:number,actor:Actor,wolfSprite?:WolfSpritePainter){
  const side=w.e.x>=w.p.x?1:-1;
  const foe=w.e.x+(400-w.e.x)*ease(age/40);
  const player=w.p.x+(foe-side*193-w.p.x)*ease(age/49);
@@ -84,7 +85,8 @@ export function drawDireWolfFinisher(ctx:CanvasRenderingContext2D,w:World,age:nu
  actor('barbarian',age<100?7:0,player,346,189,0,1);
  if(age>=34){
   const biteBob=age>119&&age<182?Math.sin((age-119)*.49)*5:0;
-  drawDetailedDireWolf(ctx,wx,337-jump+biteBob,wolfFacing,age,movement);
+  if(!wolfSprite?.(ctx,wx,337-jump+biteBob,wolfFacing,age,movement))
+   drawDetailedDireWolf(ctx,wx,337-jump+biteBob,wolfFacing,age,movement);
  }
  // Small, individual bright-red slashes track the bite at the knight's position.
  if(age>=116&&age<178&&Math.floor(age/9)%3!==2){
