@@ -72,9 +72,9 @@ export default function Fatality(){
    // Preserve the current playable artwork if the new sheet has not yet been uploaded.
    if(!img?.complete||img.naturalWidth!==1024){fighter(f,enemy);return}
    let frame=0;
-   if(phase==='fatality'&&enemy){frame=world.current?.fx&&world.current.fx>52?12:15}
-   else if(phase==='fatality'&&!enemy){frame=world.current?.fx&&world.current.fx>65?10:15}
-   else if(phase==='finish'&&enemy){frame=world.current?.frame&&world.current.frame%25<12?12:13}
+   if(world.current?.phase==='fatality'&&enemy){frame=world.current?.fx&&world.current.fx>52?12:15}
+   else if(world.current?.phase==='fatality'&&!enemy){frame=world.current?.fx&&world.current.fx>65?10:15}
+   else if(world.current?.phase==='finish'&&enemy){frame=world.current?.frame&&world.current.frame%25<12?12:13}
    else if(f.stun>0){frame=f.stun>7?12:13}
    else if(f.guard){frame=enemy?6:7}
    else if(f.attack>0){
@@ -82,7 +82,7 @@ export default function Fatality(){
       if(f.heavy){frame=progress<.32?10:progress<.60?11:progress<.85?10:11}
       else {frame=progress<.24?8:progress<.52?9:progress<.78?10:11}
    }
-   else if(f.walk&&f.walk>0){frame=2+((Math.floor(f.walk)||0)%4)}
+   else if(f.walk!==undefined&&f.walk>=0){frame=2+(Math.floor(f.walk)%4)}
    else {frame=world.current&&Math.floor(world.current.frame/31)%2?1:0}
    const unit=256,size=147,ground=290;
    ctx.save();ctx.translate(Math.round(f.x),0);ctx.scale(f.face,1);
@@ -95,7 +95,7 @@ export default function Fatality(){
    if(!img?.complete||img.naturalWidth!==1024)return;
    const unit=256;ctx.drawImage(img,(frame%4)*unit,Math.floor(frame/4)*unit,unit,unit,Math.round(x-size/2),Math.round(y-size/2),size,size)
  };
- const draw=()=>{const w=world.current;if(!w)return;w.frame++;if(w.phase==='fight'){w.time++;const p=w.p,e=w.e;const movingLeft=held.current.has('arrowleft')||held.current.has('a'),movingRight=held.current.has('arrowright')||held.current.has('d');if(movingLeft)p.x-=2.4;if(movingRight)p.x+=2.4;p.walk=(movingLeft||movingRight)?Math.floor(w.frame/7)%4:0;p.guard=held.current.has('l');p.x=Math.max(20,Math.min(300,p.x));p.face=p.x<e.x?1:-1;e.face=-p.face;if(p.attack>0)p.attack--;if(e.attack>0)e.attack--;if(p.stun>0)p.stun--;if(e.stun>0)e.stun--;w.enemyCooldown--;if(w.enemyCooldown<=0){const distance=Math.abs(p.x-e.x);if(distance>52){e.x+=Math.sign(p.x-e.x)*9;e.walk=Math.floor(w.frame/8)%4}else if(e.stun===0){e.walk=0;e.attack=15;e.attackStart=15;e.heavy=false;if(!p.guard){p.hp=Math.max(0,p.hp-8);p.stun=12;w.fx=10;if(p.hp<=0){w.phase='lose';setPhase('lose');setMessage('YOU HAVE FALLEN')}}}w.enemyCooldown=26+Math.floor(Math.random()*22)}}else if(w.phase==='finish'){w.time++;if(w.time>480){w.phase='win';setPhase('win');setMessage('VICTORY — FINISH MISSED');setScore(s=>s+100)}}else if(w.phase==='fatality'){w.fx--;if(w.fx<=0){w.phase='win';setPhase('win');setMessage('FATALITY!');setScore(s=>s+250)}}if(w.fx>0&&w.phase==='fight')w.fx--;
+ const draw=()=>{const w=world.current;if(!w)return;w.frame++;if(w.phase==='fight'){w.time++;const p=w.p,e=w.e;const movingLeft=held.current.has('arrowleft')||held.current.has('a'),movingRight=held.current.has('arrowright')||held.current.has('d');if(movingLeft)p.x-=2.4;if(movingRight)p.x+=2.4;p.walk=(movingLeft||movingRight)?Math.floor(w.frame/6)%4:-1;p.guard=held.current.has('l');p.x=Math.max(20,Math.min(300,p.x));p.face=p.x<e.x?1:-1;e.face=-p.face;if(p.attack>0)p.attack--;if(e.attack>0)e.attack--;if(p.stun>0)p.stun--;if(e.stun>0)e.stun--;w.enemyCooldown--;if(w.enemyCooldown<=0){const distance=Math.abs(p.x-e.x);if(distance>52){e.x+=Math.sign(p.x-e.x)*9;e.walk=Math.floor(w.frame/7)%4}else if(e.stun===0){e.walk=-1;e.attack=15;e.attackStart=15;e.heavy=false;if(!p.guard){p.hp=Math.max(0,p.hp-8);p.stun=12;w.fx=10;if(p.hp<=0){w.phase='lose';setPhase('lose');setMessage('YOU HAVE FALLEN')}}}w.enemyCooldown=26+Math.floor(Math.random()*22)}}else if(w.phase==='finish'){w.time++;if(w.time>480){w.phase='win';setPhase('win');setMessage('VICTORY — FINISH MISSED');setScore(s=>s+100)}}else if(w.phase==='fatality'){w.fx--;if(w.fx<=0){w.phase='win';setPhase('win');setMessage('FATALITY!');setScore(s=>s+250)}}if(w.fx>0&&w.phase==='fight')w.fx--;
  rect(0,0,320,330,'#08070d');rect(0,0,320,140,'#120b15');
  // gothic red moon and craggy castle silhouette
  ctx.fillStyle='#c31b37';ctx.beginPath();ctx.arc(245,80,45,0,Math.PI*2);ctx.fill();
