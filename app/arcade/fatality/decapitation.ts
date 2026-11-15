@@ -2,7 +2,7 @@
 // One flourish, one cut, three bold connected RED-water streams, kneel, collapse, title.
 // All artwork and effects are original, drawn using crisp unfiltered pixels.
 import type {World} from './combat';
-type Actor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean)=>void;
+type Actor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean,spin?:number)=>void;
 type Helmet=(x:number,y:number,rotation:number,size:number)=>void;
 const RED='#ef2245',DARK='#a80b2b',WHITE='#f3eee7';
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
@@ -10,19 +10,18 @@ const ease=(n:number)=>{const x=clamp(n);return x*x*(3-2*x)};
 function block(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,color:string){
  ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)));
 }
-// RED WATER: three large, continuous arcade fountains, never particle noise.
-// Each thick arch starts at the moving knight's neck and visibly lands at the feet.
-// Three broad and continuous red-water fountains, with no random droplets or sparks.
-// Layered BEHIND the body so the armour, kneeling poses and skull remain easy to read.
+// Four bold, connected RED-water arcs, each starting at the exposed neck.
+// They sit BEHIND the body so the skull flight, kneeling and collapse remain readable.
 function redWater(ctx:CanvasRenderingContext2D,x:number,y:number,dir:number,age:number){
  const streams=[
-  {start:111,end:204,height:113,reach:150,width:18},
-  {start:127,end:217,height:93,reach:134,width:16},
-  {start:147,end:226,height:70,reach:107,width:14}
+  {start:111,end:216,height:131,reach:182,width:24},
+  {start:128,end:226,height:109,reach:164,width:21},
+  {start:153,end:234,height:85,reach:137,width:18},
+  {start:180,end:237,height:62,reach:105,width:15}
  ];
  // One smooth, expanding red pool at the base. Keep it beneath the figures.
  if(age>=125){
-  const growth=ease((age-125)/74),span=32+Math.round(179*growth);
+  const growth=ease((age-125)/82),span=45+Math.round(204*growth);
   const left=dir>0?x-23:x-span+23;
   block(ctx,left,337,span,9,DARK);
   block(ctx,left+4,337,Math.max(4,span-8),6,RED);
@@ -39,7 +38,7 @@ function redWater(ctx:CanvasRenderingContext2D,x:number,y:number,dir:number,age:
    const u=i/50;
    const px=x+dir*(4+u*reach);
    const py=y-p.height*Math.sin(Math.PI*u)*strength+(337-y)*u*u;
-   const thickness=Math.max(3,Math.round(p.width*(1-.26*u)*strength));
+   const thickness=Math.max(3,Math.round(p.width*(1-.32*u)*strength));
    // Thick stepped ribbons: red core, dark outline; never a spray of loose particles.
    block(ctx,px-1,py-1,thickness+2,thickness+2,DARK);
    block(ctx,px,py,thickness,thickness,RED);
@@ -74,19 +73,26 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
   const slump=ease((age-192)/24);
   actor('knight',3,enemy+dir*(10+slump*22),348+slump*3,184,dir*slump*.08,1,true);
  }
- // These source atlas poses contain the actual sword, correctly attached to the
- // fighter's hand: 7 = upright blade, 10 = overhead, 8 = drawn back,
- // 9 = horizontal neck-height attack. Do not paint additional floating blade lines.
+ // A full 360-degree turn around the fighter's vertical axis, not a flat
+ // 360-degree rotation of the entire image (which would send him upside down).
+ // The renderer uses a smooth horizontal perspective squash and reverses facing
+ // at the midpoint. Sword and hand turn together because both are in the atlas.
+ const spinning=age>=35&&age<97;
+ const spinProgress=ease((age-35)/62);
+ const spinAngle=spinning?Math.PI*2*spinProgress:0;
  let pose=0;
- if(age>=23&&age<42)pose=7;           // draw sword high
- else if(age>=42&&age<59)pose=10;    // start short flourish
- else if(age>=59&&age<77)pose=8;     // rotate to rear guard
- else if(age>=77&&age<94)pose=10;    // finish the sword twirl overhead
- else if(age>=94&&age<106)pose=8;    // wind up for the one decisive swing
- else if(age>=106&&age<123)pose=9;   // connected sword strike, contact at 111
- else if(age>=123&&age<144)pose=8;   // follow through and recover
- else if(age>=144&&age<180)pose=7;   // composed victor posture
- actor('barbarian',pose,hero,346,190,0,1);
+ if(age>=22&&age<35)pose=7;                     // raise sword
+ else if(spinning){
+  if(spinProgress<.22)pose=7;                    // front -> edge
+  else if(spinProgress<.51)pose=10;              // back-facing overhead
+  else if(spinProgress<.76)pose=8;               // back -> edge
+  else pose=10;                                 // return facing opponent
+ }
+ else if(age>=97&&age<106)pose=8;               // plant feet, deliberate wind-up
+ else if(age>=106&&age<125)pose=9;              // one strong connected neck-height chop
+ else if(age>=125&&age<145)pose=8;              // follow-through
+ else if(age>=145)pose=7;                       // dominant victory pose
+ actor('barbarian',pose,hero,346,190,0,1,false,spinAngle);
  if(cut){
   if(helmet){
    const flight=clamp((age-111)/63);

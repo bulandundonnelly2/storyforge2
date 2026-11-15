@@ -181,13 +181,18 @@ export default function Fatality(){
   drawFinisherBackdrop(ctx,w);
   // Draw each fighter exactly once, using the selected atlas frame and staging position.
   // Portraits never float over the arena or duplicate already-rendered combat sprites.
-  drawFinisherSequence(ctx,w,move,(who,frame,x,ground,size,rotation,alpha,headless=false)=>{
+  drawFinisherSequence(ctx,w,move,(who,frame,x,ground,size,rotation,alpha,headless=false,spin=0)=>{
    const img=sprites.current[who==='barbarian'?'barbarian':'knight'];
    const f=who==='barbarian'?w.p:w.e;
    ctx.save();
    ctx.translate(Math.round(x),Math.round(ground));
    ctx.rotate(rotation);
-   ctx.scale(f.face,1);
+   // A Spectrum-era pseudo-3D turn around the upright body's vertical axis.
+   // Cosine gives two edge-on moments and a brief reversed-facing silhouette;
+   // keep at least 7% width to avoid a missing sprite at 90 and 270 degrees.
+   const depth=Math.cos(spin);
+   const lateral=spin?Math.sign(depth||1)*Math.max(.07,Math.abs(depth)):1;
+   ctx.scale(f.face*lateral,1);
    ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
    if(img?.complete&&img.naturalWidth===1024){
     const u=256,sx=(frame%4)*u,sy=Math.floor(frame/4)*u;
