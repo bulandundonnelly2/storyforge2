@@ -3,7 +3,7 @@
 import type {World} from './combat';
 import {drawDecapitation} from './decapitation';
 import {drawDireWolfFinisher} from './direwolf';
-import {drawBoneHarvest} from './bone-harvest';
+import {drawSerpentFeast} from './serpent-feast';
 import type {DireWolfSprite} from './direwolf';
 export const FINISHER_FRAMES=246;
 export const FINISHER_NAMES=['DECAPITATION','HELLFIRE','DIRE WOLF'] as const;
@@ -122,7 +122,7 @@ export function drawFinisherBackdrop(ctx:CanvasRenderingContext2D,w:World){
 }
 export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,actor:CinematicActor,helmet?:CinematicHelmet,wolfSprite?:DireWolfSprite){
  if(!hasFinisherScene(w))return;
- if(w.enemyFinisherDone){drawBoneHarvest(ctx,w,finisherAge(w),actor);return}
+ if(w.enemyFinisherDone){drawSerpentFeast(ctx,w,finisherAge(w),actor);return}
  if(move===0){drawDecapitation(ctx,w,finisherAge(w),actor,helmet);return}
  if(move===2){drawDireWolfFinisher(ctx,w,finisherAge(w),actor,wolfSprite);return}
  const age=finisherAge(w);
