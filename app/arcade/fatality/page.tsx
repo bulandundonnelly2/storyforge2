@@ -1,10 +1,10 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-type Fighter={x:number,hp:number,face:number,attack:number,stun:number,guard:boolean,walk?:number,pose?:number,heavy?:boolean,attackStart?:number};
-type World={p:Fighter,e:Fighter,phase:'fight'|'finish'|'fatality'|'win'|'lose',time:number,frame:number,fx:number,combo:number,step:number,enemyCooldown:number};
+import {createDuel,advanceDuel,ATTACKS,type Fighter,type World,type Strike,type CombatEvent} from './combat';
+import {makeDuelAudio,type DuelAudio} from './audio';
 const moves=['SWORD STORM','HELLFIRE','SKULL CRUSH'];
 export default function Fatality(){
- const canvas=useRef<HTMLCanvasElement>(null),world=useRef<World|null>(null),held=useRef(new Set<string>()),[phase,setPhase]=useState('fight'),[move,setMove]=useState(0),[message,setMessage]=useState('FIGHT!'),[score,setScore]=useState(0),[round,setRound]=useState(1);
+ const canvas=useRef<HTMLCanvasElement>(null),world=useRef<World|null>(null),held=useRef(new Set<string>()),queued=useRef<Strike|null>(null),audio=useRef<DuelAudio|null>(null),[soundOn,setSoundOn]=useState(true),[phase,setPhase]=useState('fight'),[move,setMove]=useState(0),[message,setMessage]=useState('FIGHT!'),[score,setScore]=useState(0),[round,setRound]=useState(1);
  // The source files are complete concept images, not transparent character sprites.
  // Use their central castle artwork as a stage backdrop while keeping the fighters fully animated.
  const [arena,setArena]=useState(0),arenaImage=useRef<HTMLImageElement|null>(null);
@@ -31,10 +31,18 @@ export default function Fatality(){
  img.src=arena===0?'/assets/fatality-forge-castle-duel.png':'/assets/fatality-forge-barbarian-vs-skeleton.png';
  if(img.complete&&img.naturalWidth)arenaImage.current=img;
  return()=>{active=false;img.onload=null};},[arena]);
- const start=()=>{world.current={p:{x:230,hp:100,face:1,attack:0,stun:0,guard:false},e:{x:570,hp:100,face:-1,attack:0,stun:0,guard:false},phase:'fight',time:0,frame:0,fx:0,combo:0,step:0,enemyCooldown:35};setPhase('fight');setMessage('FIGHT!')};
- const press=(k:string)=>{held.current.add(k);if(k==='j'||k==='k'||k===' '){const w=world.current;if(!w)return;if(w.phase==='finish'){const expected=['j','k','j'];if(k===expected[w.step]){w.step++;setMessage('COMBO '+w.step+'/3');if(w.step===3){w.phase='fatality';w.fx=110;setPhase('fatality');setMessage(moves[move]+'!');setScore(s=>s+500)}}else{w.step=0;setMessage('COMBO RESET — J K J')}}else if(w.phase==='fight'&&w.p.attack===0&&w.p.stun===0){w.p.attack=k==='k'?18:12;w.p.attackStart=w.p.attack;w.p.heavy=k==='k';if(Math.abs(w.p.x-w.e.x)<(k==='k'?165:138)&&!w.e.guard){w.e.hp=Math.max(0,w.e.hp-(k==='k'?18:10));w.e.stun=14;w.fx=12;setScore(s=>s+10);if(w.e.hp<=0){w.phase='finish';w.time=0;w.step=0;setPhase('finish');setMessage('FINISH HIM!  J → K → J')}}}}};
+ const start=()=>{world.current=createDuel();held.current.clear();queued.current=null;setPhase('fight');setMessage('FIGHT!')};
+ const playSound=(event:CombatEvent)=>{if(!soundOn)return;if(!audio.current)audio.current=makeDuelAudio();audio.current.play(event)};
+ useEffect(()=>()=>{audio.current?.dispose();audio.current=null},[]);
+ const press=(k:string)=>{held.current.add(k);const w=world.current;if(!w)return;
+ if(k==='j'||k==='k'||k==='i'||k===' '){
+  if(w.phase==='finish'){
+   const expected=['j','k','j'];if(k===expected[w.step]){w.step++;setMessage('FINISHER '+w.step+'/3');if(w.step===3){w.phase='fatality';w.fx=110;setPhase('fatality');setMessage(moves[move]+'!');setScore(v=>v+500);playSound({type:'finish',who:'p'})}}else{w.step=0;setMessage('FINISHER RESET — J K J')}
+  }else if(w.phase==='fight')queued.current=k==='k'?'overhead':k==='i'?'low':'body';
+ }
+};
  useEffect(()=>{start();return()=>{}},[]);
- useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup',' ','j','k','l','a','d'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
+ useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' ','j','k','i','l','a','d','s'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
  const rect=(x:number,y:number,w:number,h:number,color:string)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)};
  const poly=(pts:number[],color:string)=>{ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();ctx.fill()};
  const fighter=(f:Fighter,enemy=false)=>{const x=Math.round(f.x),y=275,white='#f4eee4',shadow='#797681',red=enemy?'#d51b37':'#ed2844',dark='#100b13';ctx.save();const stride=f.walk||0;const bob=stride===1||stride===3?2:0;ctx.translate(x,y+bob);ctx.scale(f.face,1);if(f.stun>0&&f.stun%4<2)ctx.globalAlpha=.55;
