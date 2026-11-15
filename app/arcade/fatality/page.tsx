@@ -50,7 +50,7 @@ export default function Fatality(){
  }
 };
  useEffect(()=>{start();return()=>{}},[]);
- useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0,lastTick=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' ','j','k','i','l','a','d','s'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
+ useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0,lastTick=0,stepDebt=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' ','j','k','i','l','a','d','s'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
  const rect=(x:number,y:number,w:number,h:number,color:string)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)};
  const poly=(pts:number[],color:string)=>{ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();ctx.fill()};
  const fighter=(f:Fighter,enemy=false)=>{const x=Math.round(f.x),y=275,white='#f4eee4',shadow='#797681',red=enemy?'#d51b37':'#ed2844',dark='#100b13';ctx.save();const stride=f.walk||0;const bob=stride===1||stride===3?2:0;ctx.translate(x,y+bob);ctx.scale(f.face,1);if(f.stun>0&&f.stun%4<2)ctx.globalAlpha=.55;
@@ -122,8 +122,11 @@ export default function Fatality(){
   raf=requestAnimationFrame(draw);
   // Combat is calibrated for 60 simulation steps/second. High-refresh displays
   // must not double attack speed, stamina drain or knockback physics.
-  if(timestamp-lastTick<1000/60)return;
+  if(!lastTick)lastTick=timestamp-1000/60;
+  stepDebt=Math.min(1000/30,stepDebt+Math.max(0,timestamp-lastTick));
   lastTick=timestamp;
+  if(stepDebt<1000/60)return;
+  stepDebt-=1000/60;
   const w=world.current;if(!w)return;
  const direction=(held.current.has('arrowright')||held.current.has('d')?1:0)-(held.current.has('arrowleft')||held.current.has('a')?1:0);
  const controls={direction,guard:held.current.has('l'),crouch:held.current.has('s')||held.current.has('arrowdown'),strike:queued.current};
