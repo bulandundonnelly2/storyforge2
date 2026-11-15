@@ -1,7 +1,7 @@
 // Original, timing-led duel engine for Fatality Forge. No third-party sprites or audio.
 export type Side='p'|'e';
 export type Strike='body'|'overhead'|'low';
-export type CombatEvent={type:'swing'|'hit'|'block'|'parry'|'finish'|'lose'|'win'|'exhausted';who:Side;strike?:Strike;damage?:number};
+export type CombatEvent={type:'swing'|'hit'|'block'|'parry'|'finish'|'lose'|'win'|'exhausted'|'finisherCharge'|'finisherSmash'|'finisherFinal';who:Side;strike?:Strike;damage?:number};
 export type Fighter={
  x:number;vx:number;hp:number;stamina:number;face:number;
  attack:number;attackStart:number;heavy:boolean;action:Strike|null;actionFrame:number;didConnect:boolean;
@@ -10,7 +10,7 @@ export type Fighter={
 };
 export type World={
  p:Fighter;e:Fighter;phase:'fight'|'finish'|'fatality'|'win'|'lose';
- time:number;frame:number;fx:number;step:number;combo:number;enemyCooldown:number;
+ time:number;frame:number;fx:number;step:number;combo:number;enemyCooldown:number;finisherDone?:boolean;
  freeze:number;shake:number;impactX:number;impactY:number;impactKind:'hit'|'block'|'parry'|null;
 };
 export type Controls={direction:number;guard:boolean;crouch:boolean;strike:Strike|null};
@@ -27,7 +27,7 @@ const fighter=(x:number,face:number):Fighter=>({
 });
 export function createDuel():World{
  return {p:fighter(233,1),e:fighter(567,-1),phase:'fight',time:0,frame:0,fx:0,step:0,combo:0,enemyCooldown:76,
- freeze:0,shake:0,impactX:400,impactY:225,impactKind:null};
+ freeze:0,shake:0,impactX:400,impactY:225,impactKind:null,finisherDone:false};
 }
 function clamp(n:number,lo:number,hi:number){return Math.max(lo,Math.min(hi,n))}
 function approach(current:number,target:number,maxChange:number){
