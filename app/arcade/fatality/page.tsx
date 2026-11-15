@@ -4,7 +4,7 @@ import {createDuel,advanceDuel,ATTACKS,type Fighter,type World,type Strike,type 
 import {makeDuelAudio,type DuelAudio} from './audio';
 import {makeSpectrumMusic,type SpectrumMusic} from './music';
 import {FINISHER_FRAMES,finisherAge,hasFinisherScene,drawFinisherBackdrop,drawFinisherSequence} from './cinematic';
-const moves=['SWORD STORM','HELLFIRE','SKULL CRUSH'];
+const moves=['DECAPITATION','HELLFIRE','SKULL CRUSH'];
 export default function Fatality(){
  const canvas=useRef<HTMLCanvasElement>(null),world=useRef<World|null>(null),held=useRef(new Set<string>()),queued=useRef<Strike|null>(null),audio=useRef<DuelAudio|null>(null),music=useRef<SpectrumMusic|null>(null),[musicOn,setMusicOn]=useState(true),[soundOn,setSoundOn]=useState(true),[phase,setPhase]=useState('fight'),[move,setMove]=useState(0),[message,setMessage]=useState('FIGHT!'),[score,setScore]=useState(0),[round,setRound]=useState(1);
  // The source files are complete concept images, not transparent character sprites.
@@ -119,7 +119,7 @@ export default function Fatality(){
  if(hasFinisherScene(w)&&w.phase==='fatality'){
    const age=finisherAge(w);
    if(age===57)playSound({type:'finisherCharge',who:'p'});
-   const strikes=move===0?[93,120,148]:move===1?[151]:[149];
+   const strikes=move===0?[111]:move===1?[151]:[149];
    if(strikes.includes(age))playSound({type:age===strikes[strikes.length-1]?'finisherFinal':'finisherSmash',who:'p'});
  }
  for(const event of events){
@@ -179,7 +179,7 @@ export default function Fatality(){
   drawFinisherBackdrop(ctx,w);
   // Draw each fighter exactly once, using the selected atlas frame and staging position.
   // Portraits never float over the arena or duplicate already-rendered combat sprites.
-  drawFinisherSequence(ctx,w,move,(who,frame,x,ground,size,rotation,alpha)=>{
+  drawFinisherSequence(ctx,w,move,(who,frame,x,ground,size,rotation,alpha,headless=false)=>{
    const img=sprites.current[who==='barbarian'?'barbarian':'knight'];
    const f=who==='barbarian'?w.p:w.e;
    ctx.save();
@@ -188,12 +188,35 @@ export default function Fatality(){
    ctx.scale(f.face,1);
    ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
    if(img?.complete&&img.naturalWidth===1024){
-    const u=256;ctx.drawImage(img,(frame%4)*u,Math.floor(frame/4)*u,u,u,-size/2,-size,size,size);
+    const u=256,sx=(frame%4)*u,sy=Math.floor(frame/4)*u;
+    if(!headless||who!=='knight'){
+      ctx.drawImage(img,sx,sy,u,u,-size/2,-size,size,size);
+    }else{
+      // Preserve armour, shield and weapon while omitting the original helmet.
+      // Four atlas sections leave a clean gap where the head was.
+      const dx=-size/2,dy=-size;
+      const sections:[[number,number,number,number],[number,number,number,number],[number,number,number,number],[number,number,number,number]]=[
+        [0,0,112,256],[179,0,77,256],[112,0,67,16],[112,101,67,155]
+      ];
+      for(const [x,y,sw,sh] of sections)
+        ctx.drawImage(img,sx+x,sy+y,sw,sh,dx+size*x/u,dy+size*y/u,size*sw/u,size*sh/u);
+    }
    }else{
     // Keep a visible silhouette on slow connections while atlases load.
     ctx.fillStyle=who==='barbarian'?'#eee6db':'#bcbbc1';
     ctx.fillRect(-29,-117,58,103);
     ctx.fillStyle='#e02042';ctx.fillRect(-39,-40,78,10);
+   }
+   ctx.restore();
+  },(x,y,rotation,size)=>{
+   const img=sprites.current.knight;
+   ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.rotate(rotation);
+   if(img?.complete&&img.naturalWidth===1024){
+     // Helmet and skull are isolated from the same knight art sheet used in combat.
+     ctx.drawImage(img,113,16,65,85,-size/2,-size*.64,size,size*1.12);
+   }else{
+     ctx.fillStyle='#f3eee7';ctx.fillRect(-size*.32,-size*.28,size*.64,size*.55);
+     ctx.fillStyle='#e02042';ctx.fillRect(-size*.4,-size*.31,size*.8,size*.12);
    }
    ctx.restore();
   });
