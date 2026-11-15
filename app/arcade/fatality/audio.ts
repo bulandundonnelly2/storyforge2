@@ -32,7 +32,10 @@ export function makeDuelAudio():DuelAudio{
      case 'hit':tone(59,.20,.30,'sine',.34);tone(92,.16,.18,'triangle',.40);rasp(.16,.27,350);break;
      case 'block':tone(280,.19,.13,'square',.7);rasp(.10,.16,2000);break;
      case 'parry':tone(430,.28,.16,'triangle',1.8);tone(640,.34,.08,'sine',.68);rasp(.09,.23,3700);break;
-     case 'finish':tone(53,.68,.20,'sine',.75);break;
+     case 'finish':tone(48,1.1,.24,'sawtooth',.4);tone(84,.85,.10,'sine',.55);rasp(.42,.16,210);break;
+     case 'finisherCharge':tone(115,.52,.19,'sawtooth',.58);tone(58,.62,.17,'sine',.7);rasp(.3,.11,1500);break;
+     case 'finisherSmash':tone(47,.62,.35,'sine',.23);tone(80,.27,.24,'sawtooth',.34);rasp(.31,.30,370);break;
+     case 'finisherFinal':tone(49,1.1,.24,'sawtooth',.3);tone(73,.94,.18,'sine',.38);rasp(.48,.28,700);break;
      case 'exhausted':tone(120,.11,.04,'triangle',.7);break;
      case 'lose':tone(63,.68,.25,'sawtooth',.4);break;
      case 'win':tone(83,.33,.14,'sawtooth',.7);break;
