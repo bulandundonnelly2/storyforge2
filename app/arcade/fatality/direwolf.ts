@@ -4,6 +4,7 @@ import type {World} from './combat';
 import {drawDetailedDireWolf} from './direwolf-art';
 
 type Actor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean,spin?:number)=>void;
+export type DireWolfSprite=(sequence:'run'|'pounce'|'attack'|'bite',frame:number,x:number,feet:number,facing:number)=>void;
 const WHITE='#eee9e2',BONE='#bbb3ac',BLACK='#07060a',INK='#1b1920';
 const RED='#e02042',BLOOD='#940e2b';
 const CELL=4;
@@ -52,7 +53,7 @@ function aftermath(ctx:CanvasRenderingContext2D,cx:number,age:number){
   pix(ctx,cx+37,330,10,4,BONE);
  }
 }
-export function drawDireWolfFinisher(ctx:CanvasRenderingContext2D,w:World,age:number,actor:Actor){
+export function drawDireWolfFinisher(ctx:CanvasRenderingContext2D,w:World,age:number,actor:Actor,sprite?:DireWolfSprite){
  const side=w.e.x>=w.p.x?1:-1;
  const foe=w.e.x+(400-w.e.x)*ease(age/40);
  const player=w.p.x+(foe-side*193-w.p.x)*ease(age/49);
@@ -83,8 +84,14 @@ export function drawDireWolfFinisher(ctx:CanvasRenderingContext2D,w:World,age:nu
  // Barbarian observes the wolf, sword lowered and out of the creature's way.
  actor('barbarian',age<100?7:0,player,346,189,0,1);
  if(age>=34){
-  const biteBob=age>119&&age<182?Math.sin((age-119)*.49)*5:0;
-  drawDetailedDireWolf(ctx,wx,337-jump+biteBob,wolfFacing,age,movement);
+  const biteBob=age>119&&age<182?Math.sin((age-119)*.49)*3:0;
+  // Use the approved hand-drawn 6-frame atlases for each animation phase.
+  // The bitmap artwork is displayed pixel-perfect with no canvas smoothing.
+  const sequence=age<77?'run':age<106?'pounce':age<129?'attack':age<186?'bite':'run';
+  const startFrame=sequence==='run'?34:sequence==='pounce'?77:sequence==='attack'?106:129;
+  const frame=age>=186?0:Math.floor((age-startFrame)/(sequence==='bite'?8:5))%6;
+  if(sprite)sprite(sequence,Math.max(0,frame),wx,337-jump+biteBob,wolfFacing);
+  else drawDetailedDireWolf(ctx,wx,337-jump+biteBob,wolfFacing,age,movement);
  }
  // Small, individual bright-red slashes track the bite at the knight's position.
  if(age>=116&&age<178&&Math.floor(age/9)%3!==2){
