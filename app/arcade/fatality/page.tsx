@@ -212,14 +212,46 @@ export default function Fatality(){
    }
    ctx.restore();
   },(x,y,rotation,size)=>{
-   const img=sprites.current.knight;
-   ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.rotate(rotation);
-   if(img?.complete&&img.naturalWidth===1024){
-     // Helmet and skull are isolated from the same knight art sheet used in combat.
-     ctx.drawImage(img,113,16,65,85,-size/2,-size*.64,size,size*1.12);
-   }else{
-     ctx.fillStyle='#f3eee7';ctx.fillRect(-size*.32,-size*.28,size*.64,size*.55);
-     ctx.fillStyle='#e02042';ctx.fillRect(-size*.4,-size*.31,size*.8,size*.12);
+   // An original skull-only sprite, drawn as crisp 8-bit pixels.
+   // Do NOT crop the helmet from the knight atlas: it includes shoulders and armour.
+   ctx.save();
+   ctx.translate(Math.round(x),Math.round(y));
+   ctx.rotate(rotation);
+   const p=size/16;
+   const skull=[
+     '.....XXXXXX.....',
+     '...XXXXXXXXXX...',
+     '..XXXXXXXXXXXX..',
+     '.XXXXXXXXXXXXXX.',
+     '.XXXXXXXXXXXXXX.',
+     '.XXX...XX...XXX.',
+     '.XX....XX....XX.',
+     '.XXX...XX...XXX.',
+     '.XXXXXXXXXXXXXX.',
+     '..XXXXXXXXXXXX..',
+     '..XXXX.XX.XXXX..',
+     '...XXXXXXXXXX...',
+     '....XXXXXXXX....',
+     '.....XXXXXX.....',
+     '.....X.X.X......',
+     '......XXX.......'
+   ];
+   for(let row=0;row<skull.length;row++){
+    for(let col=0;col<16;col++){
+     if(skull[row][col]==='X'){
+      ctx.fillStyle=(row>=13?'#e5ddd2':row===0||col===1||col===14?'#c3b9af':'#f3eee7');
+      ctx.fillRect(Math.round((col-8)*p),Math.round((row-8)*p),Math.ceil(p),Math.ceil(p));
+     }
+    }
+   }
+   // Dark recessed eye sockets and nasal cavity make it unmistakably a skull.
+   ctx.fillStyle='#050406';
+   ctx.fillRect(Math.round(-5*p),Math.round(-2*p),Math.ceil(3*p),Math.ceil(3*p));
+   ctx.fillRect(Math.round(2*p),Math.round(-2*p),Math.ceil(3*p),Math.ceil(3*p));
+   ctx.fillRect(Math.round(-p),Math.round(2*p),Math.ceil(2*p),Math.ceil(2*p));
+   // Teeth: alternate dark gaps rather than adding armour or a helmet.
+   for(const ix of [-3,-1,1,3]){
+    ctx.fillRect(Math.round(ix*p),Math.round(5*p),Math.ceil(p*.7),Math.ceil(p));
    }
    ctx.restore();
   });
