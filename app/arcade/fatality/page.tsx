@@ -187,12 +187,11 @@ export default function Fatality(){
    ctx.save();
    ctx.translate(Math.round(x),Math.round(ground));
    ctx.rotate(rotation);
-   // A Spectrum-era pseudo-3D turn around the upright body's vertical axis.
-   // Cosine gives two edge-on moments and a brief reversed-facing silhouette;
-   // keep at least 7% width to avoid a missing sprite at 90 and 270 degrees.
-   const depth=Math.cos(spin);
-   const lateral=spin?Math.sign(depth||1)*Math.max(.07,Math.abs(depth)):1;
-   ctx.scale(f.face*lateral,1);
+   // Full-width pose-based turning: switch facing through the back half of
+   // the leap instead of compressing the fighter to a thin line. The distinct
+   // atlas frames supply the rotation impression while the silhouette stays crisp.
+   const turnedAway=spin>Math.PI*.5&&spin<Math.PI*1.5;
+   ctx.scale(f.face*(turnedAway?-1:1),1);
    ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
    if(img?.complete&&img.naturalWidth===1024){
     const u=256,sx=(frame%4)*u,sy=Math.floor(frame/4)*u;
