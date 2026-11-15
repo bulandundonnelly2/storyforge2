@@ -1,5 +1,5 @@
 // Original Eldernight featured adventure. Separate from user-owned cloud games.
-window.hollowBellAdventure = () => {
+window.hollowBellAdventure = () => ({
   "version": 2,
   "title": "THE HOLLOW BELL",
   "genre": "Horror",
@@ -412,4 +412,4 @@ window.hollowBellAdventure = () => {
   "heroGoal": "Discover what the bell demands and decide whether to break Dunmire's bargain",
   "portrait": "Traveller",
   "background": "Forest"
-};
+});
