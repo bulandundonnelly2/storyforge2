@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-type Fighter={x:number,hp:number,face:number,attack:number,stun:number,guard:boolean};
+type Fighter={x:number,hp:number,face:number,attack:number,stun:number,guard:boolean,walk?:number,pose?:number};
 type World={p:Fighter,e:Fighter,phase:'fight'|'finish'|'fatality'|'win'|'lose',time:number,frame:number,fx:number,combo:number,step:number,enemyCooldown:number};
 const moves=['SWORD STORM','HELLFIRE','SKULL CRUSH'];
 export default function Fatality(){
@@ -11,12 +11,12 @@ export default function Fatality(){
  useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup',' ','j','k','l','a','d'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
  const rect=(x:number,y:number,w:number,h:number,color:string)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)};
  const poly=(pts:number[],color:string)=>{ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();ctx.fill()};
- const fighter=(f:Fighter,enemy=false)=>{const x=Math.round(f.x),y=275,white='#f4eee4',shadow='#797681',red=enemy?'#d51b37':'#ed2844',dark='#100b13';ctx.save();ctx.translate(x,y);ctx.scale(f.face,1);if(f.stun>0&&f.stun%4<2)ctx.globalAlpha=.55;
+ const fighter=(f:Fighter,enemy=false)=>{const x=Math.round(f.x),y=275,white='#f4eee4',shadow='#797681',red=enemy?'#d51b37':'#ed2844',dark='#100b13';ctx.save();const stride=f.walk||0;const bob=stride===1||stride===3?2:0;ctx.translate(x,y+bob);ctx.scale(f.face,1);if(f.stun>0&&f.stun%4<2)ctx.globalAlpha=.55;
  // hand-pixelled silhouette: layered armour, limbs, face, cloth and weapon
- poly([-19,-6,-5,-9,2,3,-2,23,-12,25,-17,13],dark);poly([2,-5,18,-9,19,11,16,27,5,26],dark);
- poly([-16,1,-7,1,-5,20,-10,23,-19,21],white);poly([5,1,15,1,17,21,8,23,3,18],white);
+ const leftStep=stride===1?-6:stride===3?5:0,rightStep=stride===1?5:stride===3?-6:0;poly([-19+leftStep,-6,-5,-9,2+leftStep,3,-2+leftStep,23,-12+leftStep,25,-17+leftStep,13],dark);poly([2+rightStep,-5,18,-9,19+rightStep,11,16+rightStep,27,5+rightStep,26],dark);
+ poly([-16+leftStep,1,-7,1,-5+leftStep,20,-10+leftStep,23,-19+leftStep,21],white);poly([5+rightStep,1,15,1,17+rightStep,21,8+rightStep,23,3+rightStep,18],white);
  for(let i=0;i<5;i++){rect(-17+i*2,8+i*2,2,2,shadow);rect(7+i*2,8+i*2,2,2,shadow)}
- rect(-22,21,19,5,dark);rect(3,21,19,5,dark);rect(-20,20,17,4,red);rect(4,20,16,4,red);
+ rect(-22+leftStep,21,19,5,dark);rect(3+rightStep,21,19,5,dark);rect(-20+leftStep,20,17,4,red);rect(4+rightStep,20,16,4,red);
  poly([-17,-40,-7,-49,8,-49,19,-40,18,-12,12,1,-12,1,-20,-15],dark);
  poly([-16,-39,-7,-46,9,-46,17,-37,14,-15,7,-5,-9,-5,-16,-17],enemy?red:white);
  poly([-12,-38,-4,-42,4,-37,1,-28,-11,-29],enemy?'#671328':'#b8aeb0');
@@ -36,10 +36,10 @@ export default function Fatality(){
  for(let i=0;i<6;i++)rect(-14+i*5,-44+(i%2)*7,2,2,shadow);
  if(f.guard){poly([18,-57,27,-50,27,-25,18,-17,13,-30,13,-48],dark);poly([18,-53,24,-48,24,-27,18,-22,16,-31,16,-46],red);rect(17,-40,7,3,white)}
  else {poly([18,-22,27,-26,30,-45,25,-48,20,-36],white);rect(25,-49,5,7,dark);
- if(f.attack){poly([23,-52,69,-62,73,-59,32,-44],white);poly([31,-48,70,-59,69,-55,32,-44],shadow);rect(24,-52,12,4,red)}
+ if(f.attack){const swing=f.attack>12?0:f.attack>6?1:2;if(swing===0){poly([23,-52,36,-103,42,-110,40,-100,32,-48],white);rect(20,-54,17,5,red)}else if(swing===1){poly([23,-52,69,-62,73,-59,32,-44],white);poly([31,-48,70,-59,69,-55,32,-44],shadow);rect(24,-52,12,4,red)}else{poly([24,-45,72,-26,76,-22,67,-23,25,-39],white);rect(23,-44,14,5,red)}}
  else{poly([27,-48,29,-91,33,-98,36,-92,32,-48],white);poly([31,-86,34,-93,34,-53,30,-52],shadow);rect(21,-52,18,4,red);rect(28,-59,4,17,dark)}}
- ctx.restore()};
- const draw=()=>{const w=world.current;if(!w)return;w.frame++;if(w.phase==='fight'){w.time++;const p=w.p,e=w.e;if(held.current.has('arrowleft')||held.current.has('a'))p.x-=2.4;if(held.current.has('arrowright')||held.current.has('d'))p.x+=2.4;p.guard=held.current.has('l');p.x=Math.max(20,Math.min(300,p.x));p.face=p.x<e.x?1:-1;e.face=-p.face;if(p.attack>0)p.attack--;if(e.attack>0)e.attack--;if(p.stun>0)p.stun--;if(e.stun>0)e.stun--;w.enemyCooldown--;if(w.enemyCooldown<=0){const distance=Math.abs(p.x-e.x);if(distance>52)e.x+=Math.sign(p.x-e.x)*9;else if(e.stun===0){e.attack=15;if(!p.guard){p.hp=Math.max(0,p.hp-8);p.stun=12;w.fx=10;if(p.hp<=0){w.phase='lose';setPhase('lose');setMessage('YOU HAVE FALLEN')}}}w.enemyCooldown=26+Math.floor(Math.random()*22)}}else if(w.phase==='finish'){w.time++;if(w.time>480){w.phase='win';setPhase('win');setMessage('VICTORY — FINISH MISSED');setScore(s=>s+100)}}else if(w.phase==='fatality'){w.fx--;if(w.fx<=0){w.phase='win';setPhase('win');setMessage('FATALITY!');setScore(s=>s+250)}}if(w.fx>0&&w.phase==='fight')w.fx--;
+ // individual animation-frame details: hair movement, armour highlights and skeletal joints\n if(!enemy){for(let i=0;i<9;i++){const sway=(stride===1?2:stride===3?-2:0);rect(-16-i%3+sway,-69+i*3,2,4,dark)}rect(-8,-35,4,2,'#fff');rect(5,-35,4,2,'#fff')}else{for(let i=0;i<6;i++){rect(-13+i*5,-32+(i%2)*4,2,3,white)}rect(-20,-43,4,4,red);rect(16,-43,4,4,red)}\n ctx.restore()};
+ const draw=()=>{const w=world.current;if(!w)return;w.frame++;if(w.phase==='fight'){w.time++;const p=w.p,e=w.e;const movingLeft=held.current.has('arrowleft')||held.current.has('a'),movingRight=held.current.has('arrowright')||held.current.has('d');if(movingLeft)p.x-=2.4;if(movingRight)p.x+=2.4;p.walk=(movingLeft||movingRight)?Math.floor(w.frame/7)%4:0;p.guard=held.current.has('l');p.x=Math.max(20,Math.min(300,p.x));p.face=p.x<e.x?1:-1;e.face=-p.face;if(p.attack>0)p.attack--;if(e.attack>0)e.attack--;if(p.stun>0)p.stun--;if(e.stun>0)e.stun--;w.enemyCooldown--;if(w.enemyCooldown<=0){const distance=Math.abs(p.x-e.x);if(distance>52){e.x+=Math.sign(p.x-e.x)*9;e.walk=Math.floor(w.frame/8)%4}else e.walk=0;else if(e.stun===0){e.attack=15;if(!p.guard){p.hp=Math.max(0,p.hp-8);p.stun=12;w.fx=10;if(p.hp<=0){w.phase='lose';setPhase('lose');setMessage('YOU HAVE FALLEN')}}}w.enemyCooldown=26+Math.floor(Math.random()*22)}}else if(w.phase==='finish'){w.time++;if(w.time>480){w.phase='win';setPhase('win');setMessage('VICTORY — FINISH MISSED');setScore(s=>s+100)}}else if(w.phase==='fatality'){w.fx--;if(w.fx<=0){w.phase='win';setPhase('win');setMessage('FATALITY!');setScore(s=>s+250)}}if(w.fx>0&&w.phase==='fight')w.fx--;
  rect(0,0,320,330,'#08070d');rect(0,0,320,140,'#120b15');
  // gothic red moon and craggy castle silhouette
  ctx.fillStyle='#c31b37';ctx.beginPath();ctx.arc(245,80,45,0,Math.PI*2);ctx.fill();
