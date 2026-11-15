@@ -73,26 +73,32 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
   const slump=ease((age-192)/24);
   actor('knight',3,enemy+dir*(10+slump*22),348+slump*3,184,dir*slump*.08,1,true);
  }
- // A full 360-degree turn around the fighter's vertical axis, not a flat
- // 360-degree rotation of the entire image (which would send him upside down).
- // The renderer uses a smooth horizontal perspective squash and reverses facing
- // at the midpoint. Sword and hand turn together because both are in the atlas.
- const spinning=age>=35&&age<97;
- const spinProgress=ease((age-35)/62);
- const spinAngle=spinning?Math.PI*2*spinProgress:0;
+ // The original Barbarian's Flying Neck Chop is an airborne turning attack,
+ // not a stationary sprite flattened by a cosine transform. We show the takeoff,
+ // traveling leap, turn, connected horizontal slash, then the landing.
+ // The existing 16-frame atlas provides real sword-in-hand attack and side poses.
+ const takeoff=34,turnStart=43,turnEnd=105,landing=136;
+ const airPhase=clamp((age-takeoff)/(landing-takeoff));
+ const lift=age>=takeoff&&age<landing?61*Math.sin(Math.PI*airPhase):0;
+ const turnProgress=ease((age-turnStart)/(turnEnd-turnStart));
+ const spinAngle=(age>=turnStart&&age<turnEnd)?Math.PI*2*turnProgress:0;
  let pose=0;
- if(age>=22&&age<35)pose=7;                     // raise sword
- else if(spinning){
-  if(spinProgress<.22)pose=7;                    // front -> edge
-  else if(spinProgress<.51)pose=10;              // back-facing overhead
-  else if(spinProgress<.76)pose=8;               // back -> edge
-  else pose=10;                                 // return facing opponent
- }
- else if(age>=97&&age<106)pose=8;               // plant feet, deliberate wind-up
- else if(age>=106&&age<125)pose=9;              // one strong connected neck-height chop
- else if(age>=125&&age<145)pose=8;              // follow-through
- else if(age>=145)pose=7;                       // dominant victory pose
- actor('barbarian',pose,hero,346,190,0,1,false,spinAngle);
+ if(age>=19&&age<32)pose=6;           // dip low to gather momentum
+ else if(age>=32&&age<43)pose=7;      // rise with the sword above the shoulder
+ else if(age>=turnStart&&age<turnEnd){
+  // The fighter rotates through distinct profile/guard silhouettes in the air.
+  // Avoid interpolating a flat 2D drawing into a near-zero-width smear.
+  if(turnProgress<.17)pose=3;
+  else if(turnProgress<.33)pose=4;
+  else if(turnProgress<.60)pose=10;
+  else if(turnProgress<.78)pose=4;
+  else pose=8;
+ }else if(age>=turnEnd&&age<125)pose=9; // flying neck-height chop, hit at 111
+ else if(age>=125&&age<landing)pose=8;  // absorb landing and follow through
+ else if(age>=landing&&age<154)pose=6;  // plant feet
+ else if(age>=154)pose=7;               // still victory silhouette
+ // Ground is the actor's feet position, so the arc lifts the whole body and sword.
+ actor('barbarian',pose,hero,346-lift,190,0,1,false,spinAngle);
  if(cut){
   if(helmet){
    const flight=clamp((age-111)/63);
