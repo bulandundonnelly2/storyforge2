@@ -40,6 +40,58 @@ function impact(ctx:CanvasRenderingContext2D,x:number,y:number,age:number,at:num
   box(ctx,x+Math.cos(a)*(20+dt*5),y+Math.sin(a)*(14+dt*3),dt<7?8:4,dt<7?8:4,i%3?RED:WHITE);
  }
 }
+// Original Spectrum-inspired fire, animated on a coarse six-pixel grid.
+// Separate stepped tongues and inner hot cores replace the old solid pillars.
+// Animate in four-frame increments for a convincing low-resolution flicker.
+function drawHellfire(ctx:CanvasRenderingContext2D,cx:number,age:number,foreground=false){
+ if(age<88||age>197)return;
+ const intensity=ease((age-88)/38)*(1-ease((age-165)/32));
+ if(intensity<=.01)return;
+ const tick=Math.floor(age/4),unit=6,baseY=337;
+ const roots=foreground?[-59,-29,1,31,58]:[-70,-44,-17,10,38,67];
+ const h=foreground?[39,47,33,51,40]:[102,128,151,118,142,104];
+ const widths=foreground?[13,16,11,16,13]:[22,26,29,25,27,21];
+ for(let i=0;i<roots.length;i++){
+  const flutter=Math.sin(tick*.77+i*2.1)*9+Math.cos(tick*.41+i*1.9)*5;
+  const height=Math.max(0,(h[i]+flutter)*intensity);
+  const rows=Math.ceil(height/unit);
+  for(let row=0;row<rows;row++){
+   const f=row/Math.max(1,rows-1);
+   // Stepped, tapering silhouette with slight side-to-side flame-tip movement.
+   const sway=Math.round(Math.sin(tick*.60+i*1.63+row*.39)*(1+f*10)/unit)*unit;
+   const halfWidth=Math.max(3,Math.round(widths[i]*(1-f*.83)/unit)*unit);
+   const x=Math.round((cx+roots[i]+sway)/unit)*unit;
+   const y=baseY-row*unit;
+   box(ctx,x-halfWidth,y,halfWidth*2,unit+1,DARKRED);
+   // Inner red tongue dies before the tip, leaving a dark serrated edge.
+   if(f<.88){
+    const inner=Math.max(3,halfWidth-unit);
+    box(ctx,x-inner,y,inner*2,unit,RED);
+   }
+   // Tiny white-hot tongues at the foot of the flames (never smooth gradients).
+   if(f<.42&&((row+i+tick)%4!==0)){
+    const core=Math.max(3,halfWidth-unit*2);
+    box(ctx,x-core,y,core*2,unit,WHITE);
+   }
+  }
+ }
+ // Fire connects at the base as a clear broken red pixel line.
+ if(!foreground){
+  for(let i=-15;i<=15;i++){
+   const flicker=(i+tick)%4;
+   box(ctx,cx+i*unit,baseY-6-(flicker===0?6:0),unit,unit, i%5===0?WHITE:RED);
+  }
+  // Only a few isolated ember pixels, never a cloud of particles.
+  if(intensity>.55){
+   for(let i=0;i<4;i++){
+    const travel=(tick*3+i*11)%19;
+    const x=Math.round((cx+(i-2)*36+Math.sin(tick+i)*7)/unit)*unit;
+    const y=baseY-45-travel*unit;
+    box(ctx,x,y,unit,unit,i===1?WHITE:RED);
+   }
+  }
+ }
+}
 export function finisherAge(w:World):number{
  return w.phase==='win'&&w.finisherDone?FINISHER_FRAMES:clamp(FINISHER_FRAMES-w.fx,0,FINISHER_FRAMES);
 }
@@ -81,6 +133,8 @@ export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:n
  const attackerFrame=age<60?0:attackerStrike?move===2?11:move===1?10:9:age>finalBlow?10:8;
  const enemyFrame=age<60?12:fall>0?15:13;
  ctx.save();
+ // Draw the big 8-bit flames behind the fighter, preserving his silhouette.
+ if(move===1)drawHellfire(ctx,enemyX,age);
  // Opponent collapses only after the actual blow. A single readable pose.
  if(fade>.03)actor('knight',enemyFrame,opponentX+face*fall*36,346,184,face*fall*.9,fade);
  actor('barbarian',attackerFrame,attackerX,346,188,0,1);
@@ -102,19 +156,14 @@ export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:n
    impact(ctx,enemyX,208,age,at+5);
   }
  }else if(move===1){
-  // Hellfire rises once and subsides; no particles over the sword silhouettes.
-  if(age>=88&&age<=193){
-   const amount=ease((age-88)/40)*(1-ease((age-165)/30));
-   for(let i=0;i<7;i++){
-    const x=enemyX+(i-3)*19;
-    const h=amount*(72+(i%3)*27+Math.sin(age*.17+i)*9);
-    if(h>2){
-     box(ctx,x,337-h,11,h,i%2?RED:DARKRED);
-     if(i%3===0)box(ctx,x+3,337-h+13,4,h*.67,WHITE);
-    }
-   }
+  // Short foreground tongues wrap the knight's feet without hiding his body.
+  drawHellfire(ctx,enemyX,age,true);
+  // One restrained eight-bit flare at the peak, rather than a round shockwave.
+  if(age>=151&&age<158){
+   const pulse=158-age;
+   box(ctx,enemyX-6,251-pulse*2,12,12,WHITE);
+   box(ctx,enemyX-12,266-pulse*2,24,6,RED);
   }
-  impact(ctx,enemyX,245,age,151);
  }else{
   // Skull omen approaches, one vertical crushing shockwave, then silence.
   if(age>=74&&age<142){
