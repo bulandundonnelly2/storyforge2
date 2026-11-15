@@ -50,7 +50,7 @@ export default function Fatality(){
  }
 };
  useEffect(()=>{start();return()=>{}},[]);
- useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' ','j','k','i','l','a','d','s'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
+ useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0,lastTick=0,stepDebt=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' ','j','k','i','l','a','d','s'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
  const rect=(x:number,y:number,w:number,h:number,color:string)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)};
  const poly=(pts:number[],color:string)=>{ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();ctx.fill()};
  const fighter=(f:Fighter,enemy=false)=>{const x=Math.round(f.x),y=275,white='#f4eee4',shadow='#797681',red=enemy?'#d51b37':'#ed2844',dark='#100b13';ctx.save();const stride=f.walk||0;const bob=stride===1||stride===3?2:0;ctx.translate(x,y+bob);ctx.scale(f.face,1);if(f.stun>0&&f.stun%4<2)ctx.globalAlpha=.55;
@@ -107,7 +107,9 @@ export default function Fatality(){
    // Sprite cells are square but the fighters are tall; keep silhouettes upright and leave room between them.
    const unit=256,renderWidth=190,renderHeight=190,ground=347;
    ctx.save();ctx.translate(Math.round(f.x),0);ctx.scale(f.face,1);
-   if(f.stun>0&&f.stun%4<2)ctx.globalAlpha=.8;
+   // Keep the character solid on impact; displacement communicates weight
+   // better than transparency blinking that makes hits feel ghostly.
+   if(f.stun>0)ctx.translate(-f.face*Math.min(7,f.stun*.24),0);
    ctx.drawImage(img,(frame%4)*unit,Math.floor(frame/4)*unit,unit,unit,-renderWidth/2,ground-renderHeight,renderWidth,renderHeight);
    ctx.restore();
  };
@@ -116,7 +118,16 @@ export default function Fatality(){
    if(!img?.complete||img.naturalWidth!==1024)return;
    const unit=256;ctx.drawImage(img,(frame%4)*unit,Math.floor(frame/4)*unit,unit,unit,Math.round(x-size/2),Math.round(y-size/2),size,size)
  };
- const draw=()=>{const w=world.current;if(!w)return;
+ const draw=(timestamp:number)=>{
+  raf=requestAnimationFrame(draw);
+  // Combat is calibrated for 60 simulation steps/second. High-refresh displays
+  // must not double attack speed, stamina drain or knockback physics.
+  if(!lastTick)lastTick=timestamp-1000/60;
+  stepDebt=Math.min(1000/30,stepDebt+Math.max(0,timestamp-lastTick));
+  lastTick=timestamp;
+  if(stepDebt<1000/60)return;
+  stepDebt-=1000/60;
+  const w=world.current;if(!w)return;
  const direction=(held.current.has('arrowright')||held.current.has('d')?1:0)-(held.current.has('arrowleft')||held.current.has('a')?1:0);
  const controls={direction,guard:held.current.has('l'),crouch:held.current.has('s')||held.current.has('arrowdown'),strike:queued.current};
  queued.current=null;
@@ -131,9 +142,10 @@ export default function Fatality(){
  }
  for(const event of events){
    playSound(event);
-   if(event.type==='hit'){setScore(v=>v+(event.who==='p'?event.damage||0:0));setMessage(event.who==='p'?'SOLID HIT':'YOU WERE STRUCK')}
+   if(event.type==='hit'){setScore(v=>v+(event.who==='p'?event.damage||0:0));setMessage(event.who==='p'?(event.strike==='overhead'?'CRUSHING BLOW!':'HEAVY HIT!'):'YOU WERE STRUCK')}
    else if(event.type==='parry'){if(event.who==='p')setScore(v=>v+10);setMessage(event.who==='p'?'PARRY!':'BLADE DEFLECTED')}
    else if(event.type==='block')setMessage(event.who==='p'?'BLOCKED':'BLADE STOPPED');
+   else if(event.type==='guardBreak')setMessage(event.who==='p'?'GUARD BROKEN!':'YOUR GUARD BROKE!');
    else if(event.type==='exhausted')setMessage('EXHAUSTED — RECOVER STAMINA');
    else if(event.type==='swing'&&event.who==='p')setMessage(event.strike==='overhead'?'HEAVY OVERHEAD':event.strike==='low'?'LOW SWEEP':'SWORD SLASH');
    else if(event.type==='finish'){setPhase('finish');setMessage('FINISH HIM!  J → K → J')}
@@ -280,10 +292,13 @@ export default function Fatality(){
  }else{
   fighterSprite(w.p);
   fighterSprite(w.e,true);
-  if(w.fx>0){const n=w.impactKind==='parry'?6:w.impactKind==='block'?6:w.fx>12?1:w.fx>7?2:3;renderSpriteEffect(n,w.impactX,w.impactY,105)}
+  if(w.fx>0){
+   const n=w.impactKind==='parry'?6:w.impactKind==='block'?6:w.fx>12?1:w.fx>7?2:3;
+   renderSpriteEffect(n,w.impactX,w.impactY,w.impactKind==='hit'?108:85);
+  }
  }
  if(w.phase==='finish'){ctx.textAlign='center';ctx.font='bold 31px monospace';ctx.fillStyle=w.frame%25<18?'#f33':'#fff';ctx.fillText('FINISH HIM!',400,182);ctx.textAlign='left'}
- if(w.phase==='lose'||(w.phase==='win'&&!w.finisherDone)){ctx.textAlign='center';ctx.font='bold 34px monospace';ctx.fillStyle='#fff';ctx.fillText(w.phase==='win'?'YOU WIN':'YOU LOSE',400,189);ctx.textAlign='left'}ctx.restore();raf=requestAnimationFrame(draw)};raf=requestAnimationFrame(draw);return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[move,round,soundOn]);
+ if(w.phase==='lose'||(w.phase==='win'&&!w.finisherDone)){ctx.textAlign='center';ctx.font='bold 34px monospace';ctx.fillStyle='#fff';ctx.fillText(w.phase==='win'?'YOU WIN':'YOU LOSE',400,189);ctx.textAlign='left'}ctx.restore()};raf=requestAnimationFrame(draw);return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[move,round,soundOn]);
  const button=(label:string,key:string)=><button onPointerDown={e=>{e.preventDefault();press(key);if(e.currentTarget.setPointerCapture)e.currentTarget.setPointerCapture(e.pointerId)}} onPointerUp={()=>held.current.delete(key)} onPointerCancel={()=>held.current.delete(key)} onPointerLeave={()=>held.current.delete(key)} style={{background:'#24131c',border:'2px solid #d82b49',color:'#fff',padding:'13px 14px',font:'bold 14px monospace',touchAction:'none',cursor:'pointer'}}>{label}</button>;
  return <main style={{background:'#09070d',color:'#eee',minHeight:'100vh',fontFamily:'monospace',textAlign:'center',padding:'18px 10px'}}><a href="/arcade" style={{color:'#fff'}}>← RETRO ARCADE</a><h1 style={{color:'#ef314c',fontSize:'clamp(24px,7vw,44px)',margin:'16px 0 0'}}>FATALITY FORGE</h1><p style={{letterSpacing:3,fontSize:12}}>BARBARIAN SWORD DUELS · 8-BIT FINISHERS</p><div style={{maxWidth:1480,width:'100%',margin:'auto'}}><p style={{color:'#a9a5ab',fontSize:11,letterSpacing:2}}>WIDESCREEN PIXEL-ART DUELS · MOVE / ATTACK / BLOCK / FINISH</p><div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,margin:'12px auto',flexWrap:'wrap'}}><span style={{fontSize:12,color:'#ddd'}}>CHOOSE ARENA:</span><button onClick={()=>setArena(0)} style={{padding:'8px 12px',background:arena===0?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>CASTLE DUEL</button><button onClick={()=>setArena(1)} style={{padding:'8px 12px',background:arena===1?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>BLOOD MOON</button></div><div style={{maxWidth:1480,width:'100%',margin:'auto'}}><canvas ref={canvas} width={800} height={390} style={{display:'block',width:'100%',height:'auto',aspectRatio:'800 / 390',boxSizing:'border-box',imageRendering:'pixelated',border:'3px solid #eee',background:'#08070d',margin:'0 auto'}}/><p style={{color:'#f44',fontWeight:'bold',minHeight:20}}>{message}</p><div style={{display:'flex',gap:6,justifyContent:'center',flexWrap:'wrap'}}>{button('◀','arrowleft')}{button('▶','arrowright')}{button('SLASH J','j')}{button('OVERHEAD K','k')}{button('LOW I','i')}{button('GUARD L','l')}{button('CROUCH S','s')}</div><p style={{fontSize:12,color:'#aaa'}}>MOVE ← → / A D · SLASH J · OVERHEAD K · LOW SWEEP I · GUARD L · CROUCH S / ↓</p><p style={{fontSize:12,color:'#c1a99f'}}>Time your blocks to parry. Guard high against swords, crouch + guard against low sweeps. Every strike has wind-up, contact and recovery.</p><p style={{fontSize:12,color:'#d6cbc8'}}>Red = health · pale bar = stamina · heavy strikes consume more stamina</p><button onClick={()=>{if(soundOn){audio.current?.dispose();audio.current=null}setSoundOn(v=>!v)}} style={{margin:'4px 0 10px',padding:'8px 12px',background:'#24131c',border:'1px solid #d82b49',color:'#fff',cursor:'pointer'}}>{soundOn?'SOUND ON 🔊':'SOUND OFF 🔇'}</button> <button onClick={()=>{if(musicOn){music.current?.stop();setMusicOn(false)}else{startMusic();setMusicOn(true)}}} style={{margin:'4px 0 10px',padding:'8px 12px',background:'#24131c',border:'1px solid #d82b49',color:'#fff',cursor:'pointer'}}>{musicOn?'MUSIC ON ♪':'MUSIC OFF ♫'}</button><p style={{fontSize:12,color:'#c1a99f',margin:'0 0 14px'}}>ORIGINAL SPECTRUM-STYLE BATTLE THEME · Starts when you first use the controls</p><div style={{border:'2px solid #642035',padding:14,marginTop:16}}><h2 style={{fontSize:17}}>DESIGN YOUR FATALITY</h2><p style={{fontSize:12}}>Select a finishing style. Win by landing deliberate blows, then enter J → K → J.</p><div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>{moves.map((m,i)=><button key={m} onClick={()=>setMove(i)} style={{padding:10,color:'#fff',background:move===i?'#ae1733':'#20151e',border:'1px solid #ef314c',fontFamily:'monospace'}}>{m}</button>)}</div></div><p>SCORE: {score}</p><button onClick={()=>{setRound(r=>r+1);start();if(musicOn)startMusic()}} style={{background:'#e62b49',color:'#fff',border:0,padding:'15px 25px',font:'bold 16px monospace'}}>NEW ROUND / RETRY</button><details style={{margin:'20px auto 8px',padding:12,border:'1px solid #743244',textAlign:'left'}}><summary style={{cursor:'pointer',color:'#fff',fontWeight:'bold'}}>VIEW FATALITY DESIGN ARTWORK</summary><p style={{fontSize:12,color:'#d4cad0',marginTop:12}}>Original design reference for the fatality builder. The playable combat and three selectable finishers above remain interactive.</p><img src="/assets/fatality-forge-ui-concept.png" alt="Retro black-and-red Fatality Forge design interface artwork" loading="lazy" style={{width:'100%',maxHeight:540,objectFit:'contain',imageRendering:'pixelated'}}/></details></div></div></main>
 }
