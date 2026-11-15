@@ -12,22 +12,54 @@ function block(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,
 function slash(ctx:CanvasRenderingContext2D,x:number,y:number,xx:number,yy:number,c:string,width:number){
  for(let i=0;i<=32;i++){const t=i/32;block(ctx,x+(xx-x)*t,y+(yy-y)*t,width,width,c)}
 }
+// Dramatic original three-colour arcade "red water" fountain. Each burst is
+// a deliberate arc with a bright crest and a few falling drops, rather than noise.
 function neckFountain(ctx:CanvasRenderingContext2D,x:number,y:number,dir:number,age:number){
- // Three separate, short-lived, clearly outlined arcs. No random visual noise.
- for(const [start,height,length] of [[112,40,13],[129,29,12],[150,17,10]]){
-  const t=age-start;if(t<0||t>=length)continue;
-  const fade=1-t/length;
-  for(let i=0;i<11;i++){
-   const progress=i/10;
-   const distance=(i*2.0)+(t*.7);
-   const px=x+dir*distance;
-   const py=y-height*progress*(1-progress*.36)+t*t*.20;
-   block(ctx,px,py,progress<.35?5:3,progress<.35?6:4,i%4===0?WHITE:i%2===0?RED:DARK);
+ const jets=[
+  {start:112,height:83,reach:83,life:28,weight:7},
+  {start:132,height:70,reach:72,life:27,weight:6},
+  {start:153,height:56,reach:60,life:25,weight:5},
+  {start:176,height:40,reach:46,life:23,weight:4}
+ ];
+ for(let jet=0;jet<jets.length;jet++){
+  const p=jets[jet],t=age-p.start;
+  if(t<0||t>=p.life)continue;
+  const grow=ease(t/5),fade=1-ease((t-(p.life-9))/9);
+  const power=grow*fade;
+  for(let i=0;i<=18;i++){
+   const u=i/18;
+   // The stream arcs away from the neck before curling down.
+   const px=x+dir*(5+p.reach*u*grow);
+   const py=y-p.height*(1-(1-u)*(1-u))*power+u*u*(25+Math.max(0,t-9)*1.8);
+   const thick=Math.max(2,Math.round((p.weight-3*u)*power));
+   block(ctx,px,py,thick,Math.max(3,thick+1),i%6===0?WHITE:i%3===0?DARK:RED);
   }
-  for(let i=0;i<4;i++){
-   const dx=dir*(13+i*11+t);
-   block(ctx,x+dx,y-height*.63+t*1.7+i*i,3+Math.ceil(fade*2),3,RED);
+  // Individual large droplets, staggered along the ballistic arc.
+  for(let j=0;j<7;j++){
+   const travel=(t+j*4)/p.life;
+   const dx=dir*(13+j*14+travel*21);
+   const rise=p.height*(.75-(j%3)*.11);
+   const dropY=y-rise+Math.pow(Math.max(0,t-7-j*2),2)*.42;
+   if(dropY<334&&dropY>70)
+    block(ctx,x+dx,dropY,(j%3===0?6:4)*power+1,5*power+1,j%4===0?WHITE:RED);
   }
+ }
+ // Pixel "water" lands by the feet and gathers into a shallow rippling red pool.
+ // It stays below the action, leaving both characters' silhouettes unobscured.
+ if(age>=129){
+  const spread=ease((age-129)/77),fade=1-ease((age-222)/24);
+  const width=22+Math.round(125*spread);
+  for(let i=0;i<width;i+=8){
+   const xOffset=dir*(i+7);
+   const depth=3+(i%5===0?3:0);
+   block(ctx,x+xOffset,334+((i/8)%3),7,depth,i%5===0?WHITE:i%3===0?DARK:RED);
+  }
+  for(let ripple=0;ripple<3;ripple++){
+   const xx=x+dir*(17+ripple*36+spread*18);
+   block(ctx,xx,333-ripple%2,17+spread*11,2+ripple%2,ripple===1?DARK:RED);
+  }
+  // The last splash dies down before the final title reveal.
+  if(fade<1)block(ctx,x+dir*8,336,Math.max(1,width*fade),2,DARK);
  }
 }
 export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number,actor:Actor,helmet?:Helmet){
