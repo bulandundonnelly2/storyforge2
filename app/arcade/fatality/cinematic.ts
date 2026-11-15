@@ -4,7 +4,7 @@ import type {World} from './combat';
 import {drawDecapitation} from './decapitation';
 export const FINISHER_FRAMES=246;
 export const FINISHER_NAMES=['DECAPITATION','HELLFIRE','SKULL CRUSH'] as const;
-export type CinematicActor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean)=>void;
+export type CinematicActor=(who:'barbarian'|'knight',frame:number,x:number,ground:number,size:number,rotation:number,alpha:number,headless?:boolean,spin?:number)=>void;
 export type CinematicHelmet=(x:number,y:number,rotation:number,size:number)=>void;
 const BLACK='#050406',WHITE='#f3eee7',RED='#e02042',DARKRED='#8b0e29';
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
