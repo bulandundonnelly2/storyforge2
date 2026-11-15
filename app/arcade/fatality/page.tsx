@@ -10,14 +10,18 @@ export default function Fatality(){
  // The source files are complete concept images, not transparent character sprites.
  // Use their central castle artwork as a stage backdrop while keeping the fighters fully animated.
  const [arena,setArena]=useState(0),arenaImage=useRef<HTMLImageElement|null>(null);
- const sprites=useRef<Record<'barbarian'|'knight'|'fx'|'headless',HTMLImageElement|null>>({barbarian:null,knight:null,fx:null,headless:null});
+ const sprites=useRef<Record<'barbarian'|'knight'|'fx'|'headless'|'wolfRun'|'wolfPounce'|'wolfAttack'|'wolfBite',HTMLImageElement|null>>({barbarian:null,knight:null,fx:null,headless:null,wolfRun:null,wolfPounce:null,wolfAttack:null,wolfBite:null});
  useEffect(()=>{
    let active=true;
    const sources:[keyof typeof sprites.current,string][]=[
      ['barbarian','/assets/fatality-barbarian-sprites.webp'],
      ['knight','/assets/fatality-knight-sprites.webp'],
      ['fx','/assets/fatality-fx-sprites.webp'],
-     ['headless','/assets/fatality-knight-headless-poses.webp']
+     ['headless','/assets/fatality-knight-headless-poses.webp'],
+     ['wolfRun','/assets/direwolf-run-atlas.png'],
+     ['wolfPounce','/assets/direwolf-pounce-atlas.png'],
+     ['wolfAttack','/assets/direwolf-attack-atlas.png'],
+     ['wolfBite','/assets/direwolf-bite-atlas.png']
    ];
    const pending=sources.map(([key,path])=>{
      const image=new Image();
@@ -257,6 +261,20 @@ export default function Fatality(){
      }
     }
    }
+   ctx.restore();
+  },(sequence,frame,x,feet,facing)=>{
+   const key=sequence==='run'?'wolfRun':sequence==='pounce'?'wolfPounce':sequence==='attack'?'wolfAttack':'wolfBite';
+   const atlas=sprites.current[key];
+   if(!atlas?.complete||atlas.naturalWidth!==768||atlas.naturalHeight!==512)return;
+   const cell=256,frameIndex=Math.max(0,Math.min(5,frame));
+   const sx=frameIndex%3*cell,sy=Math.floor(frameIndex/3)*cell;
+   const display=319;
+   ctx.save();
+   ctx.imageSmoothingEnabled=false;
+   ctx.translate(Math.round(x),Math.round(feet));
+   // All source frames face left: flip for opponents on the left.
+   ctx.scale(facing===-1?1:-1,1);
+   ctx.drawImage(atlas,sx,sy,cell,cell,-Math.round(display/2),-display,display,display);
    ctx.restore();
   });
  }else{
