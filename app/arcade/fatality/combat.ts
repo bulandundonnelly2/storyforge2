@@ -1,7 +1,7 @@
 // Original, timing-led duel engine for Fatality Forge. No third-party sprites or audio.
 export type Side='p'|'e';
 export type Strike='body'|'overhead'|'low';
-export type CombatEvent={type:'windup'|'swing'|'hit'|'block'|'parry'|'guardBreak'|'finish'|'lose'|'win'|'exhausted'|'finisherCharge'|'finisherSmash'|'finisherFinal'|'wolfGrowl'|'wolfBite';who:Side;strike?:Strike;damage?:number};
+export type CombatEvent={type:'windup'|'swing'|'hit'|'block'|'parry'|'guardBreak'|'finish'|'enemyFinisher'|'lose'|'win'|'exhausted'|'finisherCharge'|'finisherSmash'|'finisherFinal'|'wolfGrowl'|'wolfBite';who:Side;strike?:Strike;damage?:number};
 export type Fighter={
  x:number;vx:number;hp:number;stamina:number;face:number;
  attack:number;attackStart:number;heavy:boolean;action:Strike|null;actionFrame:number;didConnect:boolean;
@@ -9,8 +9,8 @@ export type Fighter={
  crouch:boolean;walk:number;walkClock:number;
 };
 export type World={
- p:Fighter;e:Fighter;phase:'fight'|'finish'|'fatality'|'win'|'lose';
- time:number;frame:number;fx:number;step:number;combo:number;enemyCooldown:number;finisherDone?:boolean;
+ p:Fighter;e:Fighter;phase:'fight'|'finish'|'fatality'|'enemyFatality'|'win'|'lose';
+ time:number;frame:number;fx:number;step:number;combo:number;enemyCooldown:number;finisherDone?:boolean;enemyFinisherDone?:boolean;
  freeze:number;shake:number;impactX:number;impactY:number;impactKind:'hit'|'block'|'parry'|null;
  bufferedStrike:Strike|null;bufferFrames:number;
 };
@@ -28,7 +28,7 @@ const fighter=(x:number,face:number):Fighter=>({
 });
 export function createDuel():World{
  return {p:fighter(233,1),e:fighter(567,-1),phase:'fight',time:0,frame:0,fx:0,step:0,combo:0,enemyCooldown:76,
- freeze:0,shake:0,impactX:400,impactY:225,impactKind:null,finisherDone:false,bufferedStrike:null,bufferFrames:0};
+ freeze:0,shake:0,impactX:400,impactY:225,impactKind:null,finisherDone:false,enemyFinisherDone:false,bufferedStrike:null,bufferFrames:0};
 }
 function clamp(n:number,lo:number,hi:number){return Math.max(lo,Math.min(hi,n))}
 function approach(current:number,target:number,maxChange:number){
@@ -103,9 +103,17 @@ function clash(w:World,attacker:Fighter,defender:Fighter,who:Side,events:CombatE
  w.impactKind='hit';w.fx=21;
  events.push({type:'hit',who,strike,damage});
  if(defender.hp===0){
-    w.phase=who==='p'?'finish':'lose';
-    w.time=0;w.step=0;
-    events.push({type:who==='p'?'finish':'lose',who,strike});
+    if(who==='p'){
+      w.phase='finish';w.time=0;w.step=0;
+      events.push({type:'finish',who,strike});
+    }else{
+      // The knight receives a full cinematic finisher on a KO, not an
+      // instantaneous YOU LOSE overlay. No additional input is required.
+      w.phase='enemyFatality';w.fx=246;w.time=0;w.step=0;
+      w.freeze=0;w.shake=0;w.impactKind=null;
+      w.enemyFinisherDone=true;w.bufferedStrike=null;w.bufferFrames=0;
+      events.push({type:'enemyFinisher',who,strike});
+    }
  }
 }
 function progress(f:Fighter){
@@ -126,6 +134,11 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  if(w.phase==='fatality'){
     w.frame++;w.fx=Math.max(0,w.fx-1);
     if(w.fx===0){w.phase='win';events.push({type:'win',who:'p'})}
+    return events;
+ }
+ if(w.phase==='enemyFatality'){
+    w.frame++;w.fx=Math.max(0,w.fx-1);
+    if(w.fx===0){w.phase='lose';events.push({type:'lose',who:'e'})}
     return events;
  }
  if(w.phase==='finish'){

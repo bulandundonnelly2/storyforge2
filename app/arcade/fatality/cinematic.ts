@@ -3,6 +3,7 @@
 import type {World} from './combat';
 import {drawDecapitation} from './decapitation';
 import {drawDireWolfFinisher} from './direwolf';
+import {drawBoneHarvest} from './bone-harvest';
 import type {DireWolfSprite} from './direwolf';
 export const FINISHER_FRAMES=246;
 export const FINISHER_NAMES=['DECAPITATION','HELLFIRE','DIRE WOLF'] as const;
@@ -95,9 +96,9 @@ function drawHellfire(ctx:CanvasRenderingContext2D,cx:number,age:number,foregrou
  }
 }
 export function finisherAge(w:World):number{
- return w.phase==='win'&&w.finisherDone?FINISHER_FRAMES:clamp(FINISHER_FRAMES-w.fx,0,FINISHER_FRAMES);
+ return (w.phase==='win'&&w.finisherDone||w.phase==='lose'&&w.enemyFinisherDone)?FINISHER_FRAMES:clamp(FINISHER_FRAMES-w.fx,0,FINISHER_FRAMES);
 }
-export function hasFinisherScene(w:World){return Boolean(w.finisherDone)&&(w.phase==='fatality'||w.phase==='win')}
+export function hasFinisherScene(w:World){return Boolean(w.finisherDone)&&(w.phase==='fatality'||w.phase==='win')||Boolean(w.enemyFinisherDone)&&(w.phase==='enemyFatality'||w.phase==='lose')}
 export function drawFinisherBackdrop(ctx:CanvasRenderingContext2D,w:World){
  if(!hasFinisherScene(w))return;
  const age=finisherAge(w),fade=ease(age/34);
@@ -121,6 +122,7 @@ export function drawFinisherBackdrop(ctx:CanvasRenderingContext2D,w:World){
 }
 export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:number,actor:CinematicActor,helmet?:CinematicHelmet,wolfSprite?:DireWolfSprite){
  if(!hasFinisherScene(w))return;
+ if(w.enemyFinisherDone){drawBoneHarvest(ctx,w,finisherAge(w),actor);return}
  if(move===0){drawDecapitation(ctx,w,finisherAge(w),actor,helmet);return}
  if(move===2){drawDireWolfFinisher(ctx,w,finisherAge(w),actor,wolfSprite);return}
  const age=finisherAge(w);
