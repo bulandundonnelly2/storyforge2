@@ -1,7 +1,7 @@
 // Original, timing-led duel engine for Fatality Forge. No third-party sprites or audio.
 export type Side='p'|'e';
 export type Strike='body'|'overhead'|'low';
-export type CombatEvent={type:'swing'|'hit'|'block'|'parry'|'finish'|'lose'|'win'|'exhausted'|'finisherCharge'|'finisherSmash'|'finisherFinal';who:Side;strike?:Strike;damage?:number};
+export type CombatEvent={type:'swing'|'hit'|'block'|'parry'|'finish'|'lose'|'win'|'exhausted'|'finisherCharge'|'finisherSmash'|'finisherFinal'|'wolfGrowl'|'wolfBite';who:Side;strike?:Strike;damage?:number};
 export type Fighter={
  x:number;vx:number;hp:number;stamina:number;face:number;
  attack:number;attackStart:number;heavy:boolean;action:Strike|null;actionFrame:number;didConnect:boolean;
