@@ -1,10 +1,10 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-type Fighter={x:number,hp:number,face:number,attack:number,stun:number,guard:boolean,walk?:number,pose?:number,heavy?:boolean,attackStart?:number};
-type World={p:Fighter,e:Fighter,phase:'fight'|'finish'|'fatality'|'win'|'lose',time:number,frame:number,fx:number,combo:number,step:number,enemyCooldown:number};
+import {createDuel,advanceDuel,ATTACKS,type Fighter,type World,type Strike,type CombatEvent} from './combat';
+import {makeDuelAudio,type DuelAudio} from './audio';
 const moves=['SWORD STORM','HELLFIRE','SKULL CRUSH'];
 export default function Fatality(){
- const canvas=useRef<HTMLCanvasElement>(null),world=useRef<World|null>(null),held=useRef(new Set<string>()),[phase,setPhase]=useState('fight'),[move,setMove]=useState(0),[message,setMessage]=useState('FIGHT!'),[score,setScore]=useState(0),[round,setRound]=useState(1);
+ const canvas=useRef<HTMLCanvasElement>(null),world=useRef<World|null>(null),held=useRef(new Set<string>()),queued=useRef<Strike|null>(null),audio=useRef<DuelAudio|null>(null),[soundOn,setSoundOn]=useState(true),[phase,setPhase]=useState('fight'),[move,setMove]=useState(0),[message,setMessage]=useState('FIGHT!'),[score,setScore]=useState(0),[round,setRound]=useState(1);
  // The source files are complete concept images, not transparent character sprites.
  // Use their central castle artwork as a stage backdrop while keeping the fighters fully animated.
  const [arena,setArena]=useState(0),arenaImage=useRef<HTMLImageElement|null>(null);
@@ -31,10 +31,18 @@ export default function Fatality(){
  img.src=arena===0?'/assets/fatality-forge-castle-duel.png':'/assets/fatality-forge-barbarian-vs-skeleton.png';
  if(img.complete&&img.naturalWidth)arenaImage.current=img;
  return()=>{active=false;img.onload=null};},[arena]);
- const start=()=>{world.current={p:{x:230,hp:100,face:1,attack:0,stun:0,guard:false},e:{x:570,hp:100,face:-1,attack:0,stun:0,guard:false},phase:'fight',time:0,frame:0,fx:0,combo:0,step:0,enemyCooldown:35};setPhase('fight');setMessage('FIGHT!')};
- const press=(k:string)=>{held.current.add(k);if(k==='j'||k==='k'||k===' '){const w=world.current;if(!w)return;if(w.phase==='finish'){const expected=['j','k','j'];if(k===expected[w.step]){w.step++;setMessage('COMBO '+w.step+'/3');if(w.step===3){w.phase='fatality';w.fx=110;setPhase('fatality');setMessage(moves[move]+'!');setScore(s=>s+500)}}else{w.step=0;setMessage('COMBO RESET — J K J')}}else if(w.phase==='fight'&&w.p.attack===0&&w.p.stun===0){w.p.attack=k==='k'?18:12;w.p.attackStart=w.p.attack;w.p.heavy=k==='k';if(Math.abs(w.p.x-w.e.x)<(k==='k'?165:138)&&!w.e.guard){w.e.hp=Math.max(0,w.e.hp-(k==='k'?18:10));w.e.stun=14;w.fx=12;setScore(s=>s+10);if(w.e.hp<=0){w.phase='finish';w.time=0;w.step=0;setPhase('finish');setMessage('FINISH HIM!  J → K → J')}}}}};
+ const start=()=>{world.current=createDuel();held.current.clear();queued.current=null;setPhase('fight');setMessage('FIGHT!')};
+ const playSound=(event:CombatEvent)=>{if(!soundOn)return;if(!audio.current)audio.current=makeDuelAudio();audio.current.play(event)};
+ useEffect(()=>()=>{audio.current?.dispose();audio.current=null},[]);
+ const press=(k:string)=>{held.current.add(k);if(soundOn&&!audio.current)audio.current=makeDuelAudio();const w=world.current;if(!w)return;
+ if(k==='j'||k==='k'||k==='i'||k===' '){
+  if(w.phase==='finish'){
+   const expected=['j','k','j'];if(k===expected[w.step]){w.step++;setMessage('FINISHER '+w.step+'/3');if(w.step===3){w.phase='fatality';w.fx=110;setPhase('fatality');setMessage(moves[move]+'!');setScore(v=>v+500);playSound({type:'finish',who:'p'})}}else{w.step=0;setMessage('FINISHER RESET — J K J')}
+  }else if(w.phase==='fight')queued.current=k==='k'?'overhead':k==='i'?'low':'body';
+ }
+};
  useEffect(()=>{start();return()=>{}},[]);
- useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup',' ','j','k','l','a','d'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
+ useEffect(()=>{const c=canvas.current;if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;let raf=0;const down=(e:KeyboardEvent)=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' ','j','k','i','l','a','d','s'].includes(k)){e.preventDefault();if(!held.current.has(k))press(k)}};const up=(e:KeyboardEvent)=>held.current.delete(e.key.toLowerCase());window.addEventListener('keydown',down);window.addEventListener('keyup',up);
  const rect=(x:number,y:number,w:number,h:number,color:string)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)};
  const poly=(pts:number[],color:string)=>{ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(pts[0],pts[1]);for(let i=2;i<pts.length;i+=2)ctx.lineTo(pts[i],pts[i+1]);ctx.closePath();ctx.fill()};
  const fighter=(f:Fighter,enemy=false)=>{const x=Math.round(f.x),y=275,white='#f4eee4',shadow='#797681',red=enemy?'#d51b37':'#ed2844',dark='#100b13';ctx.save();const stride=f.walk||0;const bob=stride===1||stride===3?2:0;ctx.translate(x,y+bob);ctx.scale(f.face,1);if(f.stun>0&&f.stun%4<2)ctx.globalAlpha=.55;
@@ -72,18 +80,22 @@ export default function Fatality(){
    // Preserve the current playable artwork if the new sheet has not yet been uploaded.
    if(!img?.complete||img.naturalWidth!==1024){fighter(f,enemy);return}
    let frame=0;
-   if(world.current?.phase==='fatality'&&enemy){frame=world.current?.fx&&world.current.fx>52?12:15}
-   else if(world.current?.phase==='fatality'&&!enemy){frame=world.current?.fx&&world.current.fx>65?10:15}
-   else if(world.current?.phase==='finish'&&enemy){frame=world.current?.frame&&world.current.frame%25<12?12:13}
-   else if(f.stun>0){frame=f.stun>7?12:13}
-   else if(f.guard){frame=enemy?6:7}
-   else if(f.attack>0){
-      const progress=((f.attackStart||18)-f.attack)/(f.attackStart||18);
-      if(f.heavy){frame=progress<.32?10:progress<.60?11:progress<.85?10:11}
-      else {frame=progress<.24?8:progress<.52?9:progress<.78?10:11}
+   const phase=world.current?.phase;
+   if(phase==='fatality'&&enemy)frame=(world.current?.fx||0)>52?12:15;
+   else if(phase==='fatality')frame=(world.current?.fx||0)>65?10:15;
+   else if(phase==='finish'&&enemy)frame=world.current&&world.current.frame%25<12?12:13;
+   else if(phase==='lose'&&!enemy)frame=13;
+   else if(f.stun>0)frame=f.stun>7?12:13;
+   else if(f.guard)frame=enemy?6:7;
+   else if(f.crouch)frame=enemy?6:6;
+   else if(f.action){
+      const data=ATTACKS[f.action],at=f.actionFrame,wind=data.windup,hit=data.active;
+      if(f.action==='overhead')frame=at<wind?10:at<wind+hit?11:10;
+      else if(f.action==='low')frame=at<wind?6:at<wind+hit?11:7;
+      else frame=at<wind?8:at<wind+hit?9:10;
    }
-   else if(f.walk!==undefined&&f.walk>=0){frame=2+(Math.floor(f.walk)%4)}
-   else {frame=world.current&&Math.floor(world.current.frame/31)%2?1:0}
+   else if(f.walk>=0)frame=2+(f.walk%4);
+   else frame=world.current&&Math.floor(world.current.frame/38)%2?1:0;
    // Sprite cells are square but the fighters are tall; keep silhouettes upright and leave room between them.
    const unit=256,renderWidth=190,renderHeight=190,ground=347;
    ctx.save();ctx.translate(Math.round(f.x),0);ctx.scale(f.face,1);
@@ -96,7 +108,23 @@ export default function Fatality(){
    if(!img?.complete||img.naturalWidth!==1024)return;
    const unit=256;ctx.drawImage(img,(frame%4)*unit,Math.floor(frame/4)*unit,unit,unit,Math.round(x-size/2),Math.round(y-size/2),size,size)
  };
- const draw=()=>{const w=world.current;if(!w)return;w.frame++;if(w.phase==='fight'){w.time++;const p=w.p,e=w.e;const movingLeft=held.current.has('arrowleft')||held.current.has('a'),movingRight=held.current.has('arrowright')||held.current.has('d');if(movingLeft)p.x-=4.8;if(movingRight)p.x+=4.8;p.walk=(movingLeft||movingRight)?Math.floor(w.frame/6)%4:-1;p.guard=held.current.has('l');p.x=Math.max(95,Math.min(705,p.x));const minSeparation=105;if(p.x<e.x)p.x=Math.min(p.x,e.x-minSeparation);else p.x=Math.max(p.x,e.x+minSeparation);p.face=p.x<e.x?1:-1;e.face=-p.face;if(p.attack>0)p.attack--;if(e.attack>0)e.attack--;if(p.stun>0)p.stun--;if(e.stun>0)e.stun--;w.enemyCooldown--;if(w.enemyCooldown<=0){const distance=Math.abs(p.x-e.x);if(distance>132){e.x+=Math.sign(p.x-e.x)*Math.min(12,distance-126);e.walk=Math.floor(w.frame/7)%4}else if(e.stun===0){e.walk=-1;e.attack=15;e.attackStart=15;e.heavy=false;if(!p.guard){p.hp=Math.max(0,p.hp-8);p.stun=12;w.fx=10;if(p.hp<=0){w.phase='lose';setPhase('lose');setMessage('YOU HAVE FALLEN')}}}w.enemyCooldown=26+Math.floor(Math.random()*22)}}else if(w.phase==='finish'){w.time++;if(w.time>480){w.phase='win';setPhase('win');setMessage('VICTORY — FINISH MISSED');setScore(s=>s+100)}}else if(w.phase==='fatality'){w.fx--;if(w.fx<=0){w.phase='win';setPhase('win');setMessage('FATALITY!');setScore(s=>s+250)}}if(w.fx>0&&w.phase==='fight')w.fx--;
+ const draw=()=>{const w=world.current;if(!w)return;
+ const direction=(held.current.has('arrowright')||held.current.has('d')?1:0)-(held.current.has('arrowleft')||held.current.has('a')?1:0);
+ const controls={direction,guard:held.current.has('l'),crouch:held.current.has('s')||held.current.has('arrowdown'),strike:queued.current};
+ queued.current=null;
+ const events=advanceDuel(w,controls);
+ for(const event of events){
+   playSound(event);
+   if(event.type==='hit'){setScore(v=>v+(event.who==='p'?event.damage||0:0));setMessage(event.who==='p'?'SOLID HIT':'YOU WERE STRUCK')}
+   else if(event.type==='parry'){if(event.who==='p')setScore(v=>v+10);setMessage(event.who==='p'?'PARRY!':'BLADE DEFLECTED')}
+   else if(event.type==='block')setMessage(event.who==='p'?'BLOCKED':'BLADE STOPPED');
+   else if(event.type==='exhausted')setMessage('EXHAUSTED — RECOVER STAMINA');
+   else if(event.type==='swing'&&event.who==='p')setMessage(event.strike==='overhead'?'HEAVY OVERHEAD':event.strike==='low'?'LOW SWEEP':'SWORD SLASH');
+   else if(event.type==='finish'){setPhase('finish');setMessage('FINISH HIM!  J → K → J')}
+   else if(event.type==='lose'){setPhase('lose');setMessage('YOU HAVE FALLEN')}
+   else if(event.type==='win'){setPhase('win');setMessage('VICTORY')}
+ }
+ ctx.save();if(w.shake>0&&w.freeze>0){ctx.translate((w.frame%3-1)*Math.min(4,w.shake*.35),(w.frame%2?1:-1)*Math.min(3,w.shake*.25))}
  rect(0,0,800,390,'#020203');
  const scenery=arenaImage.current;
  if(scenery?.complete&&scenery.naturalWidth){
@@ -137,10 +165,11 @@ export default function Fatality(){
  ctx.fillStyle='#f4f4f4';ctx.font='bold 16px monospace';ctx.textAlign='left';
  ctx.fillText('BARBARIAN',25,47);ctx.textAlign='right';ctx.fillText('SKELETAL KNIGHT',775,47);
  ctx.textAlign='center';ctx.font='bold 27px monospace';ctx.fillText(String(Math.max(0,99-Math.floor(w.time/60))),400,34);ctx.textAlign='left';
+ rect(25,54,290,5,'#26232c');rect(485,54,290,5,'#26232c');rect(25,54,290*w.p.stamina/100,5,'#c9b8a1');rect(485,54,290*w.e.stamina/100,5,'#c9b8a1');
  fighterSprite(w.p);if(w.phase!=='fatality'||w.fx>42)fighterSprite(w.e,true);
- if(w.fx>0){const n=w.phase==='fatality'?move===1?8+(Math.floor((110-w.fx)/8)%4):move===2?7:5:w.fx>8?1:w.fx>4?2:3;renderSpriteEffect(n,w.e.x,243,w.phase==='fatality'?130:90)}
+ if(w.fx>0){const n=w.phase==='fatality'?move===1?8+(Math.floor((110-w.fx)/8)%4):move===2?7:5:w.impactKind==='parry'?6:w.impactKind==='block'?6:w.fx>12?1:w.fx>7?2:3;renderSpriteEffect(n,w.phase==='fatality'?w.e.x:w.impactX,w.phase==='fatality'?243:w.impactY,w.phase==='fatality'?130:105)}
 if(w.phase==='fatality'){for(let i=0;i<35;i++){const a=i*2.4+w.frame*.2;rect(w.e.x+Math.sin(a)*((110-w.fx)*.5),275+Math.cos(a)*((110-w.fx)*.45),3,3,i%2?'#f33':'#eee')}if(move===1)for(let i=0;i<14;i++)rect(w.e.x-20+(i*11)%40,345-((w.frame*3+i*19)%95),5,18,'#f33');if(move===2)rect(w.e.x-35,240,70,8,'#f33')}
- if(w.phase==='finish'||w.phase==='fatality'){ctx.textAlign='center';ctx.font='bold 31px monospace';ctx.fillStyle=w.frame%25<18?'#f33':'#fff';ctx.fillText(w.phase==='finish'?'FINISH HIM!':'FATALITY!',400,182);ctx.textAlign='left'}if(w.phase==='lose'||w.phase==='win'){ctx.textAlign='center';ctx.font='bold 34px monospace';ctx.fillStyle='#fff';ctx.fillText(w.phase==='win'?'YOU WIN':'YOU LOSE',400,189);ctx.textAlign='left'}raf=requestAnimationFrame(draw)};raf=requestAnimationFrame(draw);return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[move,round]);
- const button=(label:string,key:string)=><button onPointerDown={e=>{e.preventDefault();press(key)}} onPointerUp={()=>held.current.delete(key)} onPointerCancel={()=>held.current.delete(key)} onPointerLeave={()=>held.current.delete(key)} style={{background:'#24131c',border:'2px solid #d82b49',color:'#fff',padding:'14px 16px',font:'bold 15px monospace',touchAction:'none'}}>{label}</button>;
- return <main style={{background:'#09070d',color:'#eee',minHeight:'100vh',fontFamily:'monospace',textAlign:'center',padding:'18px 10px'}}><a href="/arcade" style={{color:'#fff'}}>← RETRO ARCADE</a><h1 style={{color:'#ef314c',fontSize:'clamp(24px,7vw,44px)',margin:'16px 0 0'}}>FATALITY FORGE</h1><p style={{letterSpacing:3,fontSize:12}}>BARBARIAN SWORD DUELS · 8-BIT FINISHERS</p><div style={{maxWidth:900,margin:'auto'}}><p style={{color:'#a9a5ab',fontSize:11,letterSpacing:2}}>WIDESCREEN PIXEL-ART DUELS · MOVE / ATTACK / BLOCK / FINISH</p><div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,margin:'12px auto',flexWrap:'wrap'}}><span style={{fontSize:12,color:'#ddd'}}>CHOOSE ARENA:</span><button onClick={()=>setArena(0)} style={{padding:'8px 12px',background:arena===0?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>CASTLE DUEL</button><button onClick={()=>setArena(1)} style={{padding:'8px 12px',background:arena===1?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>BLOOD MOON</button></div><div style={{maxWidth:900,margin:'auto'}}><canvas ref={canvas} width={800} height={390} style={{width:'100%',imageRendering:'pixelated',border:'3px solid #eee',background:'#08070d'}}/><p style={{color:'#f44',fontWeight:'bold',minHeight:20}}>{message}</p><div style={{display:'flex',gap:6,justifyContent:'center',flexWrap:'wrap'}}>{button('◀','arrowleft')}{button('▶','arrowright')}{button('SWORD J','j')}{button('HEAVY K','k')}{button('BLOCK L','l')}</div><p style={{fontSize:12,color:'#aaa'}}>MOVE: ← → / A D · SWORD: J · HEAVY: K · BLOCK: L</p><div style={{border:'2px solid #642035',padding:14,marginTop:16}}><h2 style={{fontSize:17}}>DESIGN YOUR FATALITY</h2><p style={{fontSize:12}}>Choose a finishing style. Defeat your opponent, then enter J → K → J.</p><div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>{moves.map((m,i)=><button key={m} onClick={()=>setMove(i)} style={{padding:10,color:'#fff',background:move===i?'#ae1733':'#20151e',border:'1px solid #ef314c',fontFamily:'monospace'}}>{m}</button>)}</div></div><p>SCORE: {score}</p><button onClick={()=>{setRound(r=>r+1);start()}} style={{background:'#e62b49',color:'#fff',border:0,padding:'15px 25px',font:'bold 16px monospace'}}>NEW ROUND / RETRY</button><details style={{margin:'20px auto 8px',padding:12,border:'1px solid #743244',textAlign:'left'}}><summary style={{cursor:'pointer',color:'#fff',fontWeight:'bold'}}>VIEW FATALITY DESIGN ARTWORK</summary><p style={{fontSize:12,color:'#d4cad0',marginTop:12}}>Original design reference for the fatality builder. The playable combat and three selectable finishers above remain interactive.</p><img src="/assets/fatality-forge-ui-concept.png" alt="Retro black-and-red Fatality Forge design interface artwork" loading="lazy" style={{width:'100%',maxHeight:540,objectFit:'contain',imageRendering:'pixelated'}}/></details></div></div></main>
+ if(w.phase==='finish'||w.phase==='fatality'){ctx.textAlign='center';ctx.font='bold 31px monospace';ctx.fillStyle=w.frame%25<18?'#f33':'#fff';ctx.fillText(w.phase==='finish'?'FINISH HIM!':'FATALITY!',400,182);ctx.textAlign='left'}if(w.phase==='lose'||w.phase==='win'){ctx.textAlign='center';ctx.font='bold 34px monospace';ctx.fillStyle='#fff';ctx.fillText(w.phase==='win'?'YOU WIN':'YOU LOSE',400,189);ctx.textAlign='left'}ctx.restore();raf=requestAnimationFrame(draw)};raf=requestAnimationFrame(draw);return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[move,round,soundOn]);
+ const button=(label:string,key:string)=><button onPointerDown={e=>{e.preventDefault();press(key);if(e.currentTarget.setPointerCapture)e.currentTarget.setPointerCapture(e.pointerId)}} onPointerUp={()=>held.current.delete(key)} onPointerCancel={()=>held.current.delete(key)} onPointerLeave={()=>held.current.delete(key)} style={{background:'#24131c',border:'2px solid #d82b49',color:'#fff',padding:'13px 14px',font:'bold 14px monospace',touchAction:'none',cursor:'pointer'}}>{label}</button>;
+ return <main style={{background:'#09070d',color:'#eee',minHeight:'100vh',fontFamily:'monospace',textAlign:'center',padding:'18px 10px'}}><a href="/arcade" style={{color:'#fff'}}>← RETRO ARCADE</a><h1 style={{color:'#ef314c',fontSize:'clamp(24px,7vw,44px)',margin:'16px 0 0'}}>FATALITY FORGE</h1><p style={{letterSpacing:3,fontSize:12}}>BARBARIAN SWORD DUELS · 8-BIT FINISHERS</p><div style={{maxWidth:900,margin:'auto'}}><p style={{color:'#a9a5ab',fontSize:11,letterSpacing:2}}>WIDESCREEN PIXEL-ART DUELS · MOVE / ATTACK / BLOCK / FINISH</p><div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,margin:'12px auto',flexWrap:'wrap'}}><span style={{fontSize:12,color:'#ddd'}}>CHOOSE ARENA:</span><button onClick={()=>setArena(0)} style={{padding:'8px 12px',background:arena===0?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>CASTLE DUEL</button><button onClick={()=>setArena(1)} style={{padding:'8px 12px',background:arena===1?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>BLOOD MOON</button></div><div style={{maxWidth:900,margin:'auto'}}><canvas ref={canvas} width={800} height={390} style={{width:'100%',imageRendering:'pixelated',border:'3px solid #eee',background:'#08070d'}}/><p style={{color:'#f44',fontWeight:'bold',minHeight:20}}>{message}</p><div style={{display:'flex',gap:6,justifyContent:'center',flexWrap:'wrap'}}>{button('◀','arrowleft')}{button('▶','arrowright')}{button('SLASH J','j')}{button('OVERHEAD K','k')}{button('LOW I','i')}{button('GUARD L','l')}{button('CROUCH S','s')}</div><p style={{fontSize:12,color:'#aaa'}}>MOVE ← → / A D · SLASH J · OVERHEAD K · LOW SWEEP I · GUARD L · CROUCH S / ↓</p><p style={{fontSize:12,color:'#c1a99f'}}>Time your blocks to parry. Guard high against swords, crouch + guard against low sweeps. Every strike has wind-up, contact and recovery.</p><p style={{fontSize:12,color:'#d6cbc8'}}>Red = health · pale bar = stamina · heavy strikes consume more stamina</p><button onClick={()=>{if(soundOn){audio.current?.dispose();audio.current=null}setSoundOn(v=>!v)}} style={{margin:'4px 0 10px',padding:'8px 12px',background:'#24131c',border:'1px solid #d82b49',color:'#fff',cursor:'pointer'}}>{soundOn?'SOUND ON 🔊':'SOUND OFF 🔇'}</button><div style={{border:'2px solid #642035',padding:14,marginTop:16}}><h2 style={{fontSize:17}}>DESIGN YOUR FATALITY</h2><p style={{fontSize:12}}>Select a finishing style. Win by landing deliberate blows, then enter J → K → J.</p><div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>{moves.map((m,i)=><button key={m} onClick={()=>setMove(i)} style={{padding:10,color:'#fff',background:move===i?'#ae1733':'#20151e',border:'1px solid #ef314c',fontFamily:'monospace'}}>{m}</button>)}</div></div><p>SCORE: {score}</p><button onClick={()=>{setRound(r=>r+1);start()}} style={{background:'#e62b49',color:'#fff',border:0,padding:'15px 25px',font:'bold 16px monospace'}}>NEW ROUND / RETRY</button><details style={{margin:'20px auto 8px',padding:12,border:'1px solid #743244',textAlign:'left'}}><summary style={{cursor:'pointer',color:'#fff',fontWeight:'bold'}}>VIEW FATALITY DESIGN ARTWORK</summary><p style={{fontSize:12,color:'#d4cad0',marginTop:12}}>Original design reference for the fatality builder. The playable combat and three selectable finishers above remain interactive.</p><img src="/assets/fatality-forge-ui-concept.png" alt="Retro black-and-red Fatality Forge design interface artwork" loading="lazy" style={{width:'100%',maxHeight:540,objectFit:'contain',imageRendering:'pixelated'}}/></details></div></div></main>
 }
