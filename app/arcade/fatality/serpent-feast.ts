@@ -215,37 +215,33 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   actor('barbarian',age<107?0:12,victimX+panic,346-lift,188,0,1);
  }
  if(age>=143)bloodBurst(ctx,age,victimX,260);
- // Unboxed 8-bit title: sharp bitmap lettering and red liquid dripping from the glyphs.
+ // No title panel: text alone, with chunky red liquid dripping from the lettering.
  if(age>=214){
-  const reveal=ease((age-214)/16),t=age-214;
-  const title=document.createElement('canvas');
-  title.width=360;title.height=82;
-  const g=title.getContext('2d');
-  if(g){
-   g.textAlign='center';g.textBaseline='top';
-   g.fillStyle=WHITE;g.font='bold 46px monospace';g.fillText('FATALITY',180,0);
-   g.fillStyle=RED;g.font='bold 18px monospace';g.fillText('SERPENT FEAST',180,54);
-   ctx.save();ctx.globalAlpha=reveal;ctx.imageSmoothingEnabled=false;
-   // Render at half resolution then enlarge: authentic blocky, stepped letter edges.
-   const pixel=document.createElement('canvas');pixel.width=180;pixel.height=41;
-   const pg=pixel.getContext('2d');
-   if(pg){
-    pg.imageSmoothingEnabled=false;pg.drawImage(title,0,0,180,41);
-    ctx.drawImage(pixel,220,36,360,82);
-    // Red drips start directly beneath the smaller red text, with no backdrop.
-    for(let i=0;i<24;i++){
-     const x=263+i*12;
-     const dropDelay=(i*11)%35;
-     const length=Math.min(44,Math.max(0,(t-dropDelay)*.65));
-     if(length<4)continue;
-     const bottom=113+length;
-     px(ctx,x,112,4,length,i%5===0?'#9a0c29':RED);
-     px(ctx,x-2,bottom,8,4,RED);
-     if(t>dropDelay+48)px(ctx,x+2,bottom+6+((t-dropDelay)*2)%37,4,6,RED);
-    }
-   }
-   ctx.restore();
-  }
+  const alpha=ease((age-214)/16);
+  ctx.save();ctx.globalAlpha=alpha;ctx.textAlign='center';
+  ctx.fillStyle=WHITE;ctx.font='bold 48px monospace';ctx.fillText('FATALITY',400,92);
+  ctx.fillStyle=RED;ctx.font='bold 18px monospace';ctx.fillText('SERPENT FEAST',400,124);
+  ctx.restore();
+  drawTitleDrips(ctx,age-214,400,125,170);
+ }
+ ctx.restore();
+}
+
+
+// 4px-aligned red-water drips directly under the lettering; never draw a backdrop.
+function drawTitleDrips(ctx:CanvasRenderingContext2D,age:number,cx:number,baseline:number,width:number){
+ ctx.save();ctx.imageSmoothingEnabled=false;
+ const count=Math.floor(width/12);
+ for(let i=0;i<count;i++){
+  const delay=8+(i*17)%42;
+  const t=age-delay;if(t<=0)continue;
+  const x=Math.round((cx-width/2+i*12)/4)*4;
+  const length=Math.min(42,Math.floor(t*.7/4)*4);
+  if(length<4)continue;
+  ctx.fillStyle=i%4===0?'#9b0d2a':'#ef2148';
+  ctx.fillRect(x,baseline,4,length);
+  ctx.fillRect(x-2,baseline+length,8,4);
+  if(t>65){const fall=(t-65)*2%50;ctx.fillRect(x,baseline+length+fall,4,8)}
  }
  ctx.restore();
 }
