@@ -184,12 +184,32 @@ export function drawFinisherSequence(ctx:CanvasRenderingContext2D,w:World,move:n
  // Empty aftermath beat: the title only appears once the opponent has fallen.
  if(age>=211){
   const reveal=ease((age-211)/14);
-  box(ctx,171,91,458,121,'rgba(0,0,0,'+(.92*reveal).toFixed(3)+')');
+
   ctx.save();ctx.globalAlpha=reveal;ctx.textAlign='center';
   ctx.fillStyle=WHITE;ctx.font='bold 57px monospace';ctx.fillText('FATALITY',400,158);
   ctx.fillStyle=RED;ctx.font='bold 20px monospace';
   ctx.fillText(FINISHER_NAMES[move]??'FINISHER',400,192);
   ctx.restore();
+  drawTitleDrips(ctx,age-211,400,193,200);
+ }
+ ctx.restore();
+}
+
+
+// 4px-aligned red-water drips directly under the lettering; never draw a backdrop.
+function drawTitleDrips(ctx:CanvasRenderingContext2D,age:number,cx:number,baseline:number,width:number){
+ ctx.save();ctx.imageSmoothingEnabled=false;
+ const count=Math.floor(width/12);
+ for(let i=0;i<count;i++){
+  const delay=8+(i*17)%42;
+  const t=age-delay;if(t<=0)continue;
+  const x=Math.round((cx-width/2+i*12)/4)*4;
+  const length=Math.min(42,Math.floor(t*.7/4)*4);
+  if(length<4)continue;
+  ctx.fillStyle=i%4===0?'#9b0d2a':'#ef2148';
+  ctx.fillRect(x,baseline,4,length);
+  ctx.fillRect(x-2,baseline+length,8,4);
+  if(t>65){const fall=(t-65)*2%50;ctx.fillRect(x,baseline+length+fall,4,8)}
  }
  ctx.restore();
 }
