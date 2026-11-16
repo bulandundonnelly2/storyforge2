@@ -168,8 +168,8 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
   if(f.airY>0||f.airV>0){f.airY=Math.max(0,f.airY+f.airV);f.airV-=.73;if(f.airY===0)f.airV=0}
  }
  if(controls.jump&&p.airY===0&&p.stun===0){p.airV=12.6;p.airY=1;p.crouch=false}
- if(controls.special&&p.projectileCooldown===0&&p.stamina>=52&&p.stun===0){
-  p.stamina-=52;p.projectileCooldown=210;p.specialFrames=54;p.action=null;p.attack=0;
+ if(controls.special&&p.projectileCooldown===0&&p.stamina>=38&&p.stun===0){
+  p.stamina-=38;p.projectileCooldown=145;p.specialFrames=44;p.action=null;p.attack=0;
   for(let i=0;i<12;i++){
    const angle=(i/12)*Math.PI*2;
    w.projectiles.push({x:p.x,y:218-p.airY,vx:Math.cos(angle)*5.5,vy:Math.sin(angle)*5.5,who:'p',kind:'fireball',life:78,damage:10});
@@ -204,11 +204,12 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  }
  const distance=Math.abs(p.x-e.x);
  // Rare, clearly telegraphed blue hellstorm. Stronger than the barbarian's cyclone.
- if(e.projectileCooldown===0&&e.stamina>=58&&e.stun===0&&distance<350&&random()<(w.difficulty==='easy'?.001:w.difficulty==='hard'?.004:.002)){
-  e.stamina-=58;e.projectileCooldown=290;e.specialFrames=70;e.action=null;e.attack=0;
-  for(let i=0;i<16;i++){
-   const angle=(i/16)*Math.PI*2;
-   w.projectiles.push({x:e.x,y:218-e.airY,vx:Math.cos(angle)*6.1,vy:Math.sin(angle)*6.1,who:'e',kind:'bluefire',life:90,damage:18});
+ if(e.projectileCooldown===0&&e.stamina>=45&&e.stun===0&&distance<350&&random()<(w.difficulty==='easy'?.001:w.difficulty==='hard'?.004:.002)){
+  e.stamina-=45;e.projectileCooldown=195;e.specialFrames=64;e.action=null;e.attack=0;
+  // Blue Hellstorm is a wide forward fan of heavy blue flames, not another circular cyclone.
+  for(let i=0;i<9;i++){
+   const angle=(i-4)*Math.PI/20;
+   w.projectiles.push({x:e.x+e.face*40,y:210-e.airY,vx:e.face*Math.cos(angle)*7.2,vy:Math.sin(angle)*5.4,who:'e',kind:'bluefire',life:100,damage:20});
   }
   events.push({type:'swing',who:'e',strike:'spin'});
  }
