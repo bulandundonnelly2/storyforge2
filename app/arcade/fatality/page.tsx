@@ -1,16 +1,14 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {createDuel,advanceDuel,ATTACKS,type Fighter,type World,type Strike,type CombatEvent,type Character,ROSTER} from './combat';
+import {createDuel,advanceDuel,ATTACKS,type Fighter,type World,type Strike,type CombatEvent} from './combat';
 import {makeDuelAudio,type DuelAudio} from './audio';
 import {makeSpectrumMusic,type SpectrumMusic} from './music';
 import {FINISHER_FRAMES,finisherAge,hasFinisherScene,drawFinisherBackdrop,drawFinisherSequence} from './cinematic';
 const moves=['DECAPITATION','HELLFIRE','DIRE WOLF'];
-const fighters:Character[]=['barbarian','knight','vampire','warden','sorcerer'];
 export default function Fatality(){
  const canvas=useRef<HTMLCanvasElement>(null),world=useRef<World|null>(null),held=useRef(new Set<string>()),queued=useRef<Strike|null>(null),jumpQueued=useRef(false),castQueued=useRef(false),audio=useRef<DuelAudio|null>(null),music=useRef<SpectrumMusic|null>(null),[musicOn,setMusicOn]=useState(true),[soundOn,setSoundOn]=useState(true),[phase,setPhase]=useState('fight'),[move,setMove]=useState(0),[message,setMessage]=useState('FIGHT!'),[score,setScore]=useState(0),[round,setRound]=useState(1),[difficulty,setDifficulty]=useState<'easy'|'normal'|'hard'>('normal'),[wins,setWins]=useState(0),[losses,setLosses]=useState(0),[streak,setStreak]=useState(0),[matchMode,setMatchMode]=useState(false),[matchWins,setMatchWins]=useState(0),[matchLosses,setMatchLosses]=useState(0);
  // The source files are complete concept images, not transparent character sprites.
  // Use their central castle artwork as a stage backdrop while keeping the fighters fully animated.
- const [player,setPlayer]=useState<Character>('barbarian'),[opponent,setOpponent]=useState<Character>('knight');
  const [arena,setArena]=useState(0),arenaImage=useRef<HTMLImageElement|null>(null);
  const sprites=useRef<Record<'barbarian'|'knight'|'fx'|'headless'|'wolfRun'|'wolfPounce'|'wolfAttack'|'wolfBite',HTMLImageElement|null>>({barbarian:null,knight:null,fx:null,headless:null,wolfRun:null,wolfPounce:null,wolfAttack:null,wolfBite:null});
  useEffect(()=>{
@@ -40,7 +38,7 @@ export default function Fatality(){
  img.src=arena===0?'/assets/fatality-forge-castle-duel.png':'/assets/fatality-forge-barbarian-vs-skeleton.png';
  if(img.complete&&img.naturalWidth)arenaImage.current=img;
  return()=>{active=false;img.onload=null};},[arena]);
- const start=()=>{world.current=createDuel(difficulty,player,opponent);held.current.clear();queued.current=null;jumpQueued.current=false;castQueued.current=false;setPhase('fight');setMessage('FIGHT!')};
+ const start=()=>{world.current=createDuel(difficulty);held.current.clear();queued.current=null;jumpQueued.current=false;castQueued.current=false;setPhase('fight');setMessage('FIGHT!')};
  const playSound=(event:CombatEvent)=>{if(!soundOn)return;if(!audio.current)audio.current=makeDuelAudio();audio.current.play(event)};
  useEffect(()=>()=>{audio.current?.dispose();audio.current=null;music.current?.dispose();music.current=null},[]);
  const startMusic=()=>{if(!music.current)music.current=makeSpectrumMusic();music.current.start()};
@@ -49,7 +47,7 @@ export default function Fatality(){
  if(k==='f'){castQueued.current=true;return}
  if(k==='j'||k==='k'||k==='i'||k==='u'||k==='o'||k==='h'||k===' '){
   if(w.phase==='finish'){
-   const expected=['j','k','j'];if(k===expected[w.step]){w.step++;setMessage('FINISHER '+w.step+'/3');if(w.step===3){w.phase='fatality';w.fx=FINISHER_FRAMES;w.finisherDone=true;w.freeze=0;w.shake=0;w.impactKind=null;music.current?.stop();setPhase('fatality');setMessage(ROSTER[w.p.character].fatality+'!');setScore(v=>v+500);playSound({type:'finish',who:'p'})}}else{w.step=0;setMessage('FINISHER RESET — J K J')}
+   const expected=['j','k','j'];if(k===expected[w.step]){w.step++;setMessage('FINISHER '+w.step+'/3');if(w.step===3){w.phase='fatality';w.fx=FINISHER_FRAMES;w.finisherDone=true;w.freeze=0;w.shake=0;w.impactKind=null;music.current?.stop();setPhase('fatality');setMessage(moves[move]+'!');setScore(v=>v+500);playSound({type:'finish',who:'p'})}}else{w.step=0;setMessage('FINISHER RESET — J K J')}
   }else if(w.phase==='fight')queued.current=k==='k'?'overhead':k==='i'?'low':k==='u'?'thrust':k==='o'?'spin':k==='h'?'uppercut':'body';
  }
 };
@@ -88,7 +86,7 @@ export default function Fatality(){
  if(!enemy){for(let i=0;i<9;i++){const sway=(stride===1?2:stride===3?-2:0);rect(-16-i%3+sway,-69+i*3,2,4,dark)}rect(-8,-35,4,2,'#fff');rect(5,-35,4,2,'#fff')}else{for(let i=0;i<6;i++){rect(-13+i*5,-32+(i%2)*4,2,3,white)}rect(-20,-43,4,4,red);rect(16,-43,4,4,red)}
  ctx.restore()};
  const fighterSprite=(f:Fighter,enemy=false)=>{
-   const img=sprites.current[f.character==='knight'?'knight':'barbarian'];
+   const img=sprites.current[enemy?'knight':'barbarian'];
    // Preserve the current playable artwork if the new sheet has not yet been uploaded.
    if(!img?.complete||img.naturalWidth!==1024){fighter(f,enemy);return}
    let frame=0;
@@ -123,18 +121,7 @@ export default function Fatality(){
    // Keep the character solid on impact; displacement communicates weight
    // better than transparency blinking that makes hits feel ghostly.
    if(f.stun>0)ctx.translate(-f.face*Math.min(7,f.stun*.24),0);
-   // Character-specific pixel accents preserve the original atlas proportions.
    ctx.drawImage(img,(frame%4)*unit,Math.floor(frame/4)*unit,unit,unit,-renderWidth/2,ground-renderHeight,renderWidth,renderHeight);
-   if(f.character==='vampire'){
-     ctx.fillStyle='#a10c30';ctx.fillRect(-38,ground-151,76,8);ctx.fillRect(-48,ground-128,12,76);ctx.fillRect(36,ground-128,12,76);
-     ctx.fillStyle='#f1e9e5';ctx.fillRect(-11,ground-159,22,5);
-   }else if(f.character==='warden'){
-     ctx.fillStyle='#465c38';ctx.fillRect(-38,ground-146,76,10);ctx.fillRect(-45,ground-119,12,69);ctx.fillRect(33,ground-119,12,69);
-     ctx.fillStyle='#d5b895';ctx.fillRect(-13,ground-170,26,6);
-   }else if(f.character==='sorcerer'){
-     ctx.fillStyle='#bd2334';ctx.fillRect(-43,ground-143,86,10);ctx.fillRect(-40,ground-112,12,78);ctx.fillRect(28,ground-112,12,78);
-     ctx.fillStyle='#ff9b31';ctx.fillRect(-8,ground-180,16,10);
-   }
    ctx.restore();
  };
  const renderSpriteEffect=(frame:number,x:number,y:number,size=68)=>{
@@ -156,14 +143,14 @@ export default function Fatality(){
  const controls={direction,guard:held.current.has('l'),crouch:held.current.has('s')||held.current.has('arrowdown'),jump:jumpQueued.current,cast:castQueued.current,strike:queued.current};
  queued.current=null;jumpQueued.current=false;castQueued.current=false;
  const events=advanceDuel(w,controls);
- if(hasFinisherScene(w)&&w.phase==='enemyFatality'&&w.e.character==='knight'&&w.p.character==='barbarian'){
+ if(hasFinisherScene(w)&&w.phase==='enemyFatality'){
    const age=finisherAge(w);
    if(age===34)playSound({type:'finisherCharge',who:'e'});
    if(age===106)playSound({type:'finisherSmash',who:'e'});
    if(age===130||age===151||age===173)playSound({type:'wolfBite',who:'e'});
    if(age===222)playSound({type:'finisherFinal',who:'e'});
  }
- if(hasFinisherScene(w)&&w.phase==='fatality'&&w.p.character==='barbarian'&&w.e.character==='knight'){
+ if(hasFinisherScene(w)&&w.phase==='fatality'){
    const age=finisherAge(w);
    if(age===(move===0?26:move===2?68:57))playSound({type:move===2?'wolfGrowl':'finisherCharge',who:'p'});
    if(move===0&&(age===137||age===186))playSound({type:'finisherSmash',who:'p'});
@@ -180,7 +167,7 @@ export default function Fatality(){
    else if(event.type==='exhausted')setMessage('EXHAUSTED — RECOVER STAMINA');
    else if(event.type==='swing'&&event.who==='p')setMessage(event.strike==='spin'?'SPINNING SLASH':event.strike==='uppercut'?'RISING CUT':event.strike==='thrust'?'SWORD THRUST':event.strike==='overhead'?'HEAVY OVERHEAD':event.strike==='low'?'LOW SWEEP':'SWORD SLASH');
    else if(event.type==='finish'){setPhase('finish');setMessage('FINISH HIM!  J → K → J')}
-   else if(event.type==='enemyFinisher'){music.current?.stop();setPhase('enemyFatality');setMessage(ROSTER[w.e.character].fatality+'!')}
+   else if(event.type==='enemyFinisher'){music.current?.stop();setPhase('enemyFatality');setMessage('SERPENT FEAST!')}
    else if(event.type==='lose'){setPhase('lose');setMessage('YOU HAVE FALLEN');setLosses(v=>v+1);setStreak(0);if(matchMode)setMatchLosses(v=>v+1)}
    else if(event.type==='win'){setPhase('win');setMessage('VICTORY');setWins(v=>v+1);setStreak(v=>v+1);if(matchMode)setMatchWins(v=>v+1)}
  }
@@ -223,10 +210,10 @@ export default function Fatality(){
  rect(25,14,290,14,'#3c101a');rect(485,14,290,14,'#3c101a');
  rect(25,14,290*w.p.hp/180,14,'#e21c36');rect(485,14,290*w.e.hp/180,14,'#e21c36');
  ctx.fillStyle='#f4f4f4';ctx.font='bold 16px monospace';ctx.textAlign='left';
- ctx.fillText(ROSTER[w.p.character].name,25,47);ctx.textAlign='right';ctx.fillText(ROSTER[w.e.character].name,775,47);
+ ctx.fillText('BARBARIAN',25,47);ctx.textAlign='right';ctx.fillText('SKELETAL KNIGHT',775,47);
  ctx.textAlign='center';ctx.font='bold 27px monospace';ctx.fillText(String(Math.max(0,99-Math.floor(w.time/60))),400,34);ctx.textAlign='left';
  rect(25,54,290,5,'#26232c');rect(485,54,290,5,'#26232c');rect(25,54,290*w.p.stamina/100,5,'#c9b8a1');rect(485,54,290*w.e.stamina/100,5,'#c9b8a1');
- if(hasFinisherScene(w)&&w.p.character==='barbarian'&&w.e.character==='knight'){
+ if(hasFinisherScene(w)){
   drawFinisherBackdrop(ctx,w);
   // Draw each fighter exactly once, using the selected atlas frame and staging position.
   // Portraits never float over the arena or duplicate already-rendered combat sprites.
@@ -329,10 +316,7 @@ export default function Fatality(){
    const dir=shot.vx>0?1:-1;
    const xx=Math.round(shot.x/4)*4,yy=Math.round(shot.y/4)*4;
    ctx.save();ctx.translate(xx,yy);ctx.scale(dir,1);ctx.imageSmoothingEnabled=false;
-   if(shot.kind==='sword'||shot.kind==='blood'||shot.kind==='thorn'||shot.kind==='flame'){
-    if(shot.kind==='blood')ctx.filter='hue-rotate(325deg)';
-    if(shot.kind==='thorn')ctx.filter='hue-rotate(100deg)';
-    if(shot.kind==='flame')ctx.filter='hue-rotate(25deg)';
+   if(shot.kind==='sword'){
     // Barbarian: spinning flaming sword with bright white blade and red-orange fire.
     ctx.fillStyle='#f13727';ctx.fillRect(-38,-9,57,18);ctx.fillRect(-26,-17,37,7);
     ctx.fillStyle='#ff9b26';ctx.fillRect(-25,-5,45,10);ctx.fillRect(-12,-13,23,6);
@@ -346,7 +330,7 @@ export default function Fatality(){
     ctx.fillStyle='#0b0710';ctx.fillRect(17,-7,7,6);ctx.fillRect(28,3,11,4);
     ctx.fillStyle='#ef2148';ctx.fillRect(11,-19,6,10);ctx.fillRect(23,-15,6,9);
    }
-   ctx.filter='none';ctx.restore();
+   ctx.restore();
   }
   if(w.fx>0){
    const n=w.impactKind==='parry'?6:w.impactKind==='block'?6:w.fx>12?1:w.fx>7?2:3;
@@ -357,17 +341,13 @@ export default function Fatality(){
   ctx.textAlign='center';ctx.font='bold 20px monospace';ctx.fillStyle='#ff4967';
   ctx.fillText(w.p.comboHits+' HIT COMBO!',400,83);
  }
- if(w.phase==='fatality'&&!(w.p.character==='barbarian'&&w.e.character==='knight')){ctx.textAlign='center';ctx.font='bold 27px monospace';ctx.fillStyle='#e72848';ctx.fillText(ROSTER[w.p.character].fatality+'!',400,165);ctx.textAlign='left'}
- if(w.phase==='enemyFatality'&&!(w.p.character==='barbarian'&&w.e.character==='knight')){ctx.textAlign='center';ctx.font='bold 27px monospace';ctx.fillStyle='#e72848';ctx.fillText(ROSTER[w.e.character].fatality+'!',400,165);ctx.textAlign='left'}
  if(w.phase==='finish'){ctx.textAlign='center';ctx.font='bold 31px monospace';ctx.fillStyle=w.frame%25<18?'#f33':'#fff';ctx.fillText('FINISH HIM!',400,182);ctx.textAlign='left'}
  if((w.phase==='lose'&&!w.enemyFinisherDone)||(w.phase==='win'&&!w.finisherDone)){ctx.textAlign='center';ctx.font='bold 34px monospace';ctx.fillStyle='#fff';ctx.fillText(w.phase==='win'?'YOU WIN':'YOU LOSE',400,189);ctx.textAlign='left'}ctx.restore()};raf=requestAnimationFrame(draw);return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[move,round,soundOn]);
  const button=(label:string,key:string)=><button onPointerDown={e=>{e.preventDefault();press(key);if(e.currentTarget.setPointerCapture)e.currentTarget.setPointerCapture(e.pointerId)}} onPointerUp={()=>held.current.delete(key)} onPointerCancel={()=>held.current.delete(key)} onPointerLeave={()=>held.current.delete(key)} style={{background:'#24131c',border:'2px solid #d82b49',color:'#fff',padding:'13px 14px',font:'bold 14px monospace',touchAction:'none',cursor:'pointer'}}>{label}</button>;
- return <main style={{background:'#09070d',color:'#eee',minHeight:'100vh',fontFamily:'monospace',textAlign:'center',padding:'18px 10px'}}><a href="/arcade" style={{color:'#fff'}}>← RETRO ARCADE</a><h1 style={{color:'#ef314c',fontSize:'clamp(24px,7vw,44px)',margin:'16px 0 0'}}>FATALITY FORGE</h1><p style={{letterSpacing:3,fontSize:12}}>FIVE FIGHTERS · UNIQUE MAGIC · 8-BIT FINISHERS</p><div style={{maxWidth:1480,width:'100%',margin:'auto'}}><p style={{color:'#a9a5ab',fontSize:11,letterSpacing:2}}>WIDESCREEN PIXEL-ART DUELS · MOVE / ATTACK / BLOCK / FINISH</p><div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,flexWrap:'wrap',margin:'12px auto',fontSize:13}}>
- <label>PLAY AS: <select value={player} onChange={e=>{const v=e.target.value as Character;setPlayer(v);world.current=createDuel(difficulty,v,opponent);setPhase('fight');setMessage('FIGHT!')}} style={{background:'#24131c',color:'#fff',padding:8,border:'1px solid #ef314c'}}>{fighters.map(id=><option key={id} value={id}>{ROSTER[id].name}</option>)}</select></label>
- <label>FIGHT: <select value={opponent} onChange={e=>{const v=e.target.value as Character;setOpponent(v);world.current=createDuel(difficulty,player,v);setPhase('fight');setMessage('FIGHT!')}} style={{background:'#24131c',color:'#fff',padding:8,border:'1px solid #ef314c'}}>{fighters.filter(id=>id!==player).map(id=><option key={id} value={id}>{ROSTER[id].name}</option>)}</select></label>
+ return <main style={{background:'#09070d',color:'#eee',minHeight:'100vh',fontFamily:'monospace',textAlign:'center',padding:'18px 10px'}}><a href="/arcade" style={{color:'#fff'}}>← RETRO ARCADE</a><h1 style={{color:'#ef314c',fontSize:'clamp(24px,7vw,44px)',margin:'16px 0 0'}}>FATALITY FORGE</h1><p style={{letterSpacing:3,fontSize:12}}>BARBARIAN SWORD DUELS · 8-BIT FINISHERS</p><div style={{maxWidth:1480,width:'100%',margin:'auto'}}><p style={{color:'#a9a5ab',fontSize:11,letterSpacing:2}}>WIDESCREEN PIXEL-ART DUELS · MOVE / ATTACK / BLOCK / FINISH</p><div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,flexWrap:'wrap',margin:'12px auto',fontSize:13}}>
  <label>DIFFICULTY: <select value={difficulty} onChange={e=>{const d=e.target.value as 'easy'|'normal'|'hard';setDifficulty(d);if(world.current&&world.current.phase==='fight')world.current.difficulty=d}} style={{background:'#24131c',color:'#fff',padding:8,border:'1px solid #ef314c'}}><option value="easy">APPRENTICE</option><option value="normal">WARRIOR</option><option value="hard">NIGHTMARE</option></select></label>
  <label style={{cursor:'pointer'}}><input type="checkbox" checked={matchMode} onChange={e=>{setMatchMode(e.target.checked);setMatchWins(0);setMatchLosses(0);setRound(1);start()}}/> BEST OF 3</label>
  <span>WINS {wins} · LOSSES {losses} · STREAK {streak}</span>
  {matchMode&&<span style={{color:'#ef314c'}}>MATCH {matchWins}–{matchLosses}{matchWins===2?' · YOU WIN THE MATCH':matchLosses===2?' · KNIGHT WINS THE MATCH':''}</span>}
- </div><div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,margin:'12px auto',flexWrap:'wrap'}}><span style={{fontSize:12,color:'#ddd'}}>CHOOSE ARENA:</span><button onClick={()=>setArena(0)} style={{padding:'8px 12px',background:arena===0?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>CASTLE DUEL</button><button onClick={()=>setArena(1)} style={{padding:'8px 12px',background:arena===1?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>BLOOD MOON</button></div><div style={{maxWidth:1480,width:'100%',margin:'auto'}}><canvas ref={canvas} width={800} height={390} style={{display:'block',width:'100%',height:'auto',aspectRatio:'800 / 390',boxSizing:'border-box',imageRendering:'pixelated',border:'3px solid #eee',background:'#08070d',margin:'0 auto'}}/><p style={{color:'#f44',fontWeight:'bold',minHeight:20}}>{message}</p><div style={{display:'flex',gap:6,justifyContent:'center',flexWrap:'wrap'}}>{button('◀','arrowleft')}{button('▶','arrowright')}{button('SLASH J','j')}{button('OVERHEAD K','k')}{button('LOW I','i')}{button('THRUST U','u')}{button('SPIN O','o')}{button('UPPERCUT H','h')}{button('GUARD L','l')}{button('CROUCH S','s')}{button('JUMP W / ↑','w')}{button('FIRE F','f')}</div><p style={{fontSize:12,color:'#aaa'}}>MOVE ← → / A D · SLASH J · OVERHEAD K · LOW SWEEP I · THRUST U · SPIN O · RISING CUT H · GUARD L · CROUCH S / ↓ · JUMP W / ↑ · FIRE F · JUMP + J/K/I FOR AERIAL ATTACKS</p><p style={{fontSize:12,color:'#c1a99f'}}>Time your blocks to parry. Guard high against swords, crouch + guard against low sweeps. Every strike has wind-up, contact and recovery.</p><p style={{fontSize:12,color:'#d6cbc8'}}>Red = health · pale bar = stamina · heavy strikes and fire projectiles consume stamina · both fighters have 180 HP</p><button onClick={()=>{if(soundOn){audio.current?.dispose();audio.current=null}setSoundOn(v=>!v)}} style={{margin:'4px 0 10px',padding:'8px 12px',background:'#24131c',border:'1px solid #d82b49',color:'#fff',cursor:'pointer'}}>{soundOn?'SOUND ON 🔊':'SOUND OFF 🔇'}</button> <button onClick={()=>{if(musicOn){music.current?.stop();setMusicOn(false)}else{startMusic();setMusicOn(true)}}} style={{margin:'4px 0 10px',padding:'8px 12px',background:'#24131c',border:'1px solid #d82b49',color:'#fff',cursor:'pointer'}}>{musicOn?'MUSIC ON ♪':'MUSIC OFF ♫'}</button><p style={{fontSize:12,color:'#c1a99f',margin:'0 0 14px'}}>ORIGINAL SPECTRUM-STYLE BATTLE THEME · Starts when you first use the controls</p><div style={{border:'2px solid #642035',padding:14,marginTop:16}}><h2 style={{fontSize:17}}>DESIGN YOUR FATALITY</h2><p style={{fontSize:12}}>Each fighter has a signature finisher and special projectile. Win by landing deliberate blows, then enter J → K → J. Lose and the skeletal knight transforms into a giant serpent for SERPENT FEAST.</p><div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>{moves.map((m,i)=><button key={m} onClick={()=>setMove(i)} style={{padding:10,color:'#fff',background:move===i?'#ae1733':'#20151e',border:'1px solid #ef314c',fontFamily:'monospace'}}>{m}</button>)}</div></div><p>SCORE: {score} · ROUND {round} · WINS {wins} · WIN STREAK {streak}</p><button onClick={()=>{if(matchMode&&(matchWins>=2||matchLosses>=2)){setMatchWins(0);setMatchLosses(0)}setRound(r=>r+1);start();if(musicOn)startMusic()}} style={{background:'#e62b49',color:'#fff',border:0,padding:'15px 25px',font:'bold 16px monospace'}}>{matchMode&&(matchWins>=2||matchLosses>=2)?'NEW MATCH':'NEW ROUND / RETRY'}</button><details style={{margin:'20px auto 8px',padding:12,border:'1px solid #743244',textAlign:'left'}}><summary style={{cursor:'pointer',color:'#fff',fontWeight:'bold'}}>VIEW FATALITY DESIGN ARTWORK</summary><p style={{fontSize:12,color:'#d4cad0',marginTop:12}}>Original design reference for the fatality builder. Win to perform one of three selectable finishers; the skeletal knight transforms into a giant serpent if you lose.</p><img src="/assets/fatality-forge-ui-concept.png" alt="Retro black-and-red Fatality Forge design interface artwork" loading="lazy" style={{width:'100%',maxHeight:540,objectFit:'contain',imageRendering:'pixelated'}}/></details></div></div></main>
+ </div><div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,margin:'12px auto',flexWrap:'wrap'}}><span style={{fontSize:12,color:'#ddd'}}>CHOOSE ARENA:</span><button onClick={()=>setArena(0)} style={{padding:'8px 12px',background:arena===0?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>CASTLE DUEL</button><button onClick={()=>setArena(1)} style={{padding:'8px 12px',background:arena===1?'#b91532':'#21151e',color:'#fff',border:'1px solid #ff4560'}}>BLOOD MOON</button></div><div style={{maxWidth:1480,width:'100%',margin:'auto'}}><canvas ref={canvas} width={800} height={390} style={{display:'block',width:'100%',height:'auto',aspectRatio:'800 / 390',boxSizing:'border-box',imageRendering:'pixelated',border:'3px solid #eee',background:'#08070d',margin:'0 auto'}}/><p style={{color:'#f44',fontWeight:'bold',minHeight:20}}>{message}</p><div style={{display:'flex',gap:6,justifyContent:'center',flexWrap:'wrap'}}>{button('◀','arrowleft')}{button('▶','arrowright')}{button('SLASH J','j')}{button('OVERHEAD K','k')}{button('LOW I','i')}{button('THRUST U','u')}{button('SPIN O','o')}{button('UPPERCUT H','h')}{button('GUARD L','l')}{button('CROUCH S','s')}{button('JUMP W / ↑','w')}{button('FIRE F','f')}</div><p style={{fontSize:12,color:'#aaa'}}>MOVE ← → / A D · SLASH J · OVERHEAD K · LOW SWEEP I · THRUST U · SPIN O · RISING CUT H · GUARD L · CROUCH S / ↓ · JUMP W / ↑ · FIRE F · JUMP + J/K/I FOR AERIAL ATTACKS</p><p style={{fontSize:12,color:'#c1a99f'}}>Time your blocks to parry. Guard high against swords, crouch + guard against low sweeps. Every strike has wind-up, contact and recovery.</p><p style={{fontSize:12,color:'#d6cbc8'}}>Red = health · pale bar = stamina · heavy strikes and fire projectiles consume stamina · both fighters have 180 HP</p><button onClick={()=>{if(soundOn){audio.current?.dispose();audio.current=null}setSoundOn(v=>!v)}} style={{margin:'4px 0 10px',padding:'8px 12px',background:'#24131c',border:'1px solid #d82b49',color:'#fff',cursor:'pointer'}}>{soundOn?'SOUND ON 🔊':'SOUND OFF 🔇'}</button> <button onClick={()=>{if(musicOn){music.current?.stop();setMusicOn(false)}else{startMusic();setMusicOn(true)}}} style={{margin:'4px 0 10px',padding:'8px 12px',background:'#24131c',border:'1px solid #d82b49',color:'#fff',cursor:'pointer'}}>{musicOn?'MUSIC ON ♪':'MUSIC OFF ♫'}</button><p style={{fontSize:12,color:'#c1a99f',margin:'0 0 14px'}}>ORIGINAL SPECTRUM-STYLE BATTLE THEME · Starts when you first use the controls</p><div style={{border:'2px solid #642035',padding:14,marginTop:16}}><h2 style={{fontSize:17}}>DESIGN YOUR FATALITY</h2><p style={{fontSize:12}}>Select your finishing style. Win by landing deliberate blows, then enter J → K → J. Lose and the skeletal knight transforms into a giant serpent for SERPENT FEAST.</p><div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>{moves.map((m,i)=><button key={m} onClick={()=>setMove(i)} style={{padding:10,color:'#fff',background:move===i?'#ae1733':'#20151e',border:'1px solid #ef314c',fontFamily:'monospace'}}>{m}</button>)}</div></div><p>SCORE: {score} · ROUND {round} · WINS {wins} · WIN STREAK {streak}</p><button onClick={()=>{if(matchMode&&(matchWins>=2||matchLosses>=2)){setMatchWins(0);setMatchLosses(0)}setRound(r=>r+1);start();if(musicOn)startMusic()}} style={{background:'#e62b49',color:'#fff',border:0,padding:'15px 25px',font:'bold 16px monospace'}}>{matchMode&&(matchWins>=2||matchLosses>=2)?'NEW MATCH':'NEW ROUND / RETRY'}</button><details style={{margin:'20px auto 8px',padding:12,border:'1px solid #743244',textAlign:'left'}}><summary style={{cursor:'pointer',color:'#fff',fontWeight:'bold'}}>VIEW FATALITY DESIGN ARTWORK</summary><p style={{fontSize:12,color:'#d4cad0',marginTop:12}}>Original design reference for the fatality builder. Win to perform one of three selectable finishers; the skeletal knight transforms into a giant serpent if you lose.</p><img src="/assets/fatality-forge-ui-concept.png" alt="Retro black-and-red Fatality Forge design interface artwork" loading="lazy" style={{width:'100%',maxHeight:540,objectFit:'contain',imageRendering:'pixelated'}}/></details></div></div></main>
 }
