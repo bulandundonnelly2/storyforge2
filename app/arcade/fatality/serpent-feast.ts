@@ -108,6 +108,42 @@ function constrict(c:CanvasRenderingContext2D,x:number,y:number,age:number){
  }
  c.restore();
 }
+
+// Six hand-drawn Dire Wolf-style poses from serpent-atlas-256.png (3 columns x 2 rows).
+// Keep a procedural fallback until the binary sprite is available in /public.
+let atlas:HTMLCanvasElement|null=null;
+let loading=false;
+function spriteAtlas():HTMLCanvasElement|null{
+ if(typeof window==='undefined')return null;
+ if(atlas||loading)return atlas;
+ loading=true;
+ const img=new Image();
+ img.onload=()=>{
+  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const g=c.getContext('2d',{willReadFrequently:true});if(!g)return;
+  g.drawImage(img,0,0);
+  const pixels=g.getImageData(0,0,c.width,c.height);
+  for(let i=0;i<pixels.data.length;i+=4){
+   const r=pixels.data[i],gr=pixels.data[i+1],b=pixels.data[i+2];
+   // Remove the sprite sheet's black background to layer it over both fighters.
+   if(r<31&&gr<31&&b<31)pixels.data[i+3]=0;
+  }
+  g.putImageData(pixels,0,0);atlas=c;
+ };
+ img.onerror=()=>{loading=false};
+ img.src='/arcade/serpent-atlas-256.png';
+ return null;
+}
+function drawSprite(c:CanvasRenderingContext2D,age:number,cx:number,side:number):boolean{
+ const a=spriteAtlas();if(!a)return false;
+ const frame=age<72?0:age<107?1:age<137?2:age<161?3:age<192?4:5;
+ const fw=a.width/3,fh=a.height/2;
+ c.save();c.imageSmoothingEnabled=false;
+ c.translate(Math.round(cx),0);c.scale(side===1?-1:1,1);
+ c.drawImage(a,(frame%3)*fw,Math.floor(frame/3)*fh,fw,fh,-190,35,380,330);
+ c.restore();return true;
+}
+
 export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number,actor:SerpentActor){
  // The skeletal knight transforms on screen, coils around the barbarian, then swallows him.
  const side=w.p.x>=w.e.x?1:-1;
@@ -132,7 +168,7 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
  // 42-82: A giant serpent grows out of the knight's position, not from off-screen.
  if(age>=43){
   ctx.save();ctx.globalAlpha=ease((age-43)/29);
-  serpent(ctx,age,cx-side*43,side);
+  if(!drawSprite(ctx,age,cx-side*43,side))serpent(ctx,age,cx-side*43,side);
   ctx.restore();
  }
  // The barbarian remains visible throughout the grab and tightening coils.
