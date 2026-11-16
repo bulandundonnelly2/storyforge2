@@ -127,26 +127,43 @@ function drawSprite(c:CanvasRenderingContext2D,age:number,cx:number,side:number)
 }
 
 
-// Separate upper and lower halves of the barbarian during the finishing bite.
-// Clipping the existing detailed fighter artwork preserves the Dire Wolf pixel style.
-function tornVictim(ctx:CanvasRenderingContext2D,actor:SerpentActor,age:number,x:number,side:number){
- const split=ease((age-153)/16),scatter=ease((age-168)/27);
- const upperX=x-side*(10*split+54*scatter),lowerX=x+side*(13*split+34*scatter);
- const upperY=346-32*split-57*scatter,lowerY=346+18*scatter;
- const seamY=265;
- ctx.save();ctx.beginPath();ctx.rect(0,0,800,seamY);ctx.clip();
- actor('barbarian',15,upperX,upperY,188,side*(-.24*split-.48*scatter),1-ease((age-198)/15));
+// The victim stays whole and is progressively swallowed head-first.
+// A mouth aperture masks the body so the player sees it disappearing inside.
+function swallowVictim(ctx:CanvasRenderingContext2D,actor:SerpentActor,age:number,x:number,mouthX:number,side:number){
+ const progress=ease((age-141)/66);
+ const grab=ease((age-104)/36);
+ const targetX=mouthX-side*14;
+ const vx=x+(targetX-x)*progress;
+ const feet=346-45*grab-102*progress;
+ const scale=188*(1-.78*progress);
+ ctx.save();
+ // Clip to the outside of the serpent's mouth; never draw a detached head/skull.
+ const lip=mouthX-side*12;
+ ctx.beginPath();
+ if(side>0)ctx.rect(0,0,Math.max(0,lip),400);
+ else ctx.rect(Math.min(800,lip),0,800-Math.min(800,lip),400);
+ ctx.clip();
+ actor('barbarian',age<117?0:12,vx,feet,scale,side*(-.18*grab-.65*progress),1-ease((age-198)/9));
  ctx.restore();
- ctx.save();ctx.beginPath();ctx.rect(0,seamY,800,400-seamY);ctx.clip();
- actor('barbarian',15,lowerX,lowerY,188,side*(.16*split+.9*scatter),1-ease((age-198)/15));
- ctx.restore();
- // Pixelated red separation and falling droplets, no extra skull prop.
- for(let i=0;i<22;i++){
-  const phase=i*2.399+age*.13,travel=(7+i%6*5)*split;
-  const bx=x+Math.cos(phase)*travel+side*(i%3-1)*scatter*22;
-  const by=seamY+Math.sin(phase)*travel+(age-153)*(.2+(i%4)*.12)*split;
-  if(age>=153&&age<202)px(ctx,bx,by,3+(i%3)*2,3+(i%2)*3,i%5===0?WHITE:RED);
+ // Blood appears at the bite, not as an unrelated object in the fighter's hand.
+ if(age>=142&&age<194){
+  for(let i=0;i<15;i++){
+   const p=(age-142)*(.8+(i%4)*.27);
+   const dx=Math.sin(i*2.4)*p*.8,dy=Math.cos(i*1.7)*p*.35+p*.65;
+   px(ctx,mouthX+dx,201+dy,3+i%3*2,3+i%2*2,i%6===0?WHITE:RED);
+  }
  }
+}
+function stomachBulge(ctx:CanvasRenderingContext2D,age:number,cx:number,side:number){
+ const gulp=ease((age-164)/38),settle=ease((age-213)/20);
+ if(gulp<=0)return;
+ const width=(15+32*gulp-12*settle),height=(9+23*gulp-8*settle);
+ const x=cx-side*(35-65*gulp),y=300+Math.sin(age*.13)*2;
+ ctx.save();ctx.globalAlpha=.9;
+ poly(ctx,[x-width,y,x-width*.7,y-height,x+width*.7,y-height,x+width,y,x+width*.65,y+height,x-width*.7,y+height],WHITE);
+ poly(ctx,[x-width*.72,y,x-width*.45,y-height*.7,x+width*.5,y-height*.7,x+width*.78,y,x+width*.45,y+height*.65,x-width*.5,y+height*.65],BLACK);
+ for(let i=0;i<15;i++)px(ctx,x-width+((i*13)%(width*2)),y-height+((i*7)%(height*2)),3,2,WHITE);
+ ctx.restore();
 }
 
 export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number,actor:SerpentActor){
@@ -176,23 +193,17 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   if(!drawSprite(ctx,age,cx-side*43,side))serpent(ctx,age,cx-side*43,side);
   ctx.restore();
  }
- // The opponent is gripped, then visibly torn into two separate animated pieces.
- if(age<153){
+ // 105-207: the serpent bites the barbarian and swallows him whole.
+ // Frame 15 previously showed a skull-like prop; never use that frame.
+ if(age<141){
   const panic=age>=106?Math.sin(age*.42)*4:0;
-  const lift=age>=124?ease((age-124)/29)*32:0;
+  const lift=age>=124?ease((age-124)/29)*45:0;
   actor('barbarian',age<107?0:12,victimX+panic,346-lift,188,0,1);
- }else if(age<215){
-  tornVictim(ctx,actor,age,victimX,side);
+ }else if(age<209){
+  swallowVictim(ctx,actor,age,victimX,cx+side*102,side);
  }
- // The atlas itself supplies the coils; do not overlay the old three-bar constriction effect.
- // 160-194: jaws close as the two halves separate; no detached skull is drawn.
- if(age>=158&&age<195){
-  const swallow=ease((age-158)/36);
-  const mouthX=cx+side*102,mouthY=207;
-  px(ctx,mouthX-side*23,mouthY-13,46,10,BLACK);
-  for(let i=0;i<6;i++)px(ctx,mouthX-side*(24-i*7),mouthY+Math.sin(age*.5+i)*4,5,6,i%2?WHITE:RED);
-  if(swallow>.7)px(ctx,mouthX-side*13,mouthY+4,23,5,RED);
- }
+ // A visible moving bulge tracks the swallowed fighter through the coils.
+ if(age>=165)stomachBulge(ctx,age,cx-side*43,side);
  // 196-215: full-bellied serpent recoils and settles; only then reveal the title.
  if(age>=214){
   const a=ease((age-214)/17);
