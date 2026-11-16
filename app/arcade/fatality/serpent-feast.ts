@@ -91,24 +91,6 @@ function serpent(c:CanvasRenderingContext2D,age:number,cx:number,side:number){
  if(age>=148&&age<185){for(let i=0;i<7;i++){const x=headX+70+(i%3)*13,y=headY+12+(i-3)*10;px(c,x,y,4+(i%2)*3,4,i%3===0?WHITE:RED)}}
  c.restore();
 }
-// Thick overlapping front loop: drawn after the barbarian to make strangling unmistakable.
-function constrict(c:CanvasRenderingContext2D,x:number,y:number,age:number){
- const tight=ease((age-107)/30),squeeze=Math.sin(age*.26)*3;
- c.save();c.translate(Math.round(x),Math.round(y));
- for(let k=0;k<3;k++){
-  const yy=-10+k*31+squeeze*(k%2?1:-1);
-  const width=82-k*12-12*tight;
-  poly(c,[-width,yy-14,-width+14,yy-24,width-16,yy-24,width,yy-11,width-3,yy+13,width-17,yy+18,-width+15,yy+18,-width-4,yy+9],WHITE);
-  poly(c,[-width+7,yy-6,-width+18,yy-14,width-18,yy-14,width-9,yy-6,width-16,yy+5,-width+15,yy+5],BLACK);
-  for(let i=0;i<18;i++){
-   const xx=-width+18+i*(width*2-36)/18;
-   px(c,xx,yy-10+(i%2)*2,5,2,WHITE);
-   if(i%3===0)px(c,xx+2,yy+8,3,3,RED);
-  }
- }
- c.restore();
-}
-
 // Six hand-drawn Dire Wolf-style poses from serpent-atlas-256.png (3 columns x 2 rows).
 // Keep a procedural fallback until the binary sprite is available in /public.
 let atlas:HTMLCanvasElement|null=null;
@@ -183,12 +165,7 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   const ground=346-lift-90*swallow;
   if(age<160||swallow<.99)actor('barbarian',age<107?0:age<148?12:15,x+panic,ground,size,side*swallow*.75,1);
  }
- // 106-159: Body crosses IN FRONT of the victim. Coils squeeze progressively tighter.
- if(age>=106&&age<165){
-  ctx.save();ctx.globalAlpha=ease((age-106)/12)*(1-ease((age-153)/12));
-  constrict(ctx,victimX,242,age);
-  ctx.restore();
- }
+ // The atlas itself supplies the coils; do not overlay the old three-bar constriction effect.
  // 160-194: the serpent's jaws engulf the last visible part of the victim.
  if(age>=158&&age<195){
   const swallow=ease((age-158)/36);
