@@ -6,15 +6,15 @@ export type Fighter={
  x:number;vx:number;hp:number;stamina:number;face:number;
  attack:number;attackStart:number;heavy:boolean;action:Strike|null;actionFrame:number;didConnect:boolean;
  stun:number;guard:boolean;guardLow:boolean;guardFrames:number;guardTimer:number;
- crouch:boolean;walk:number;walkClock:number;airY:number;airV:number;projectileCooldown:number;comboHits:number;comboWindow:number;aiMode:'approach'|'retreat'|'hold'|'bait'|'rush';aiTimer:number;
+ crouch:boolean;walk:number;walkClock:number;airY:number;airV:number;projectileCooldown:number;specialFrames:number;comboHits:number;comboWindow:number;aiMode:'approach'|'retreat'|'hold'|'bait'|'rush';aiTimer:number;
 };
 export type World={
  p:Fighter;e:Fighter;phase:'fight'|'finish'|'fatality'|'enemyFatality'|'win'|'lose';
  time:number;frame:number;fx:number;step:number;combo:number;enemyCooldown:number;finisherDone?:boolean;enemyFinisherDone?:boolean;
  freeze:number;shake:number;impactX:number;impactY:number;impactKind:'hit'|'block'|'parry'|null;
- bufferedStrike:Strike|null;bufferFrames:number;projectiles:{x:number;y:number;vx:number;who:Side;kind:'sword'|'dragon';life:number}[];difficulty:'easy'|'normal'|'hard';
+ bufferedStrike:Strike|null;bufferFrames:number;projectiles:{x:number;y:number;vx:number;who:Side;kind:'sword'|'dragon'|'fireball'|'bluefire';life:number;vy?:number;damage?:number}[];difficulty:'easy'|'normal'|'hard';
 };
-export type Controls={direction:number;guard:boolean;crouch:boolean;jump?:boolean;cast?:boolean;strike:Strike|null};
+export type Controls={direction:number;guard:boolean;crouch:boolean;jump?:boolean;cast?:boolean;special?:boolean;strike:Strike|null};
 export const ATTACKS:Record<Strike,{windup:number;active:number;recovery:number;damage:number;reach:number;cost:number;push:number;hitstop:number}>={
  body:{windup:9,active:6,recovery:17,damage:13,reach:156,cost:15,push:21,hitstop:7},
  overhead:{windup:17,active:7,recovery:25,damage:21,reach:173,cost:29,push:32,hitstop:10},
@@ -27,7 +27,7 @@ const fighter=(x:number,face:number):Fighter=>({
  x,vx:0,hp:180,stamina:100,face,
  attack:0,attackStart:0,heavy:false,action:null,actionFrame:0,didConnect:false,
  stun:0,guard:false,guardLow:false,guardFrames:0,guardTimer:0,
- crouch:false,walk:-1,walkClock:0,airY:0,airV:0,projectileCooldown:0,comboHits:0,comboWindow:0,aiMode:'hold',aiTimer:50
+ crouch:false,walk:-1,walkClock:0,airY:0,airV:0,projectileCooldown:0,specialFrames:0,comboHits:0,comboWindow:0,aiMode:'hold',aiTimer:50
 });
 export function createDuel(difficulty:'easy'|'normal'|'hard'='normal'):World{
  return {p:fighter(233,1),e:fighter(567,-1),phase:'fight',time:0,frame:0,fx:0,step:0,combo:0,enemyCooldown:76,
@@ -38,7 +38,7 @@ function approach(current:number,target:number,maxChange:number){
  return current<target?Math.min(target,current+maxChange):Math.max(target,current-maxChange)
 }
 function initiate(f:Fighter,strike:Strike|null,who:Side,events:CombatEvent[]){
- if(!strike||f.action||f.stun>0)return false;
+ if(!strike||f.action||f.stun>0||f.specialFrames>0)return false;
  const move=ATTACKS[strike];
  if(f.stamina<move.cost){if(who==='p')events.push({type:'exhausted',who});return false}
  f.stamina-=move.cost;f.action=strike;f.actionFrame=0;f.didConnect=false;
@@ -50,7 +50,7 @@ function initiate(f:Fighter,strike:Strike|null,who:Side,events:CombatEvent[]){
  return true;
 }
 function posture(f:Fighter,move:number,guard:boolean,crouch:boolean){
- const busy=!!f.action||f.stun>0;
+ const busy=!!f.action||f.stun>0||f.specialFrames>0;
  f.crouch=crouch&&!busy;
  f.guard=guard&&!busy&&f.stamina>5;
  f.guardLow=f.guard&&f.crouch;
@@ -164,10 +164,19 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  for(const f of [p,e]){
   if(f.comboWindow>0)f.comboWindow--;else f.comboHits=0;
   if(f.projectileCooldown>0)f.projectileCooldown--;
+  if(f.specialFrames>0)f.specialFrames--;
   if(f.airY>0||f.airV>0){f.airY=Math.max(0,f.airY+f.airV);f.airV-=.73;if(f.airY===0)f.airV=0}
  }
  if(controls.jump&&p.airY===0&&p.stun===0){p.airV=12.6;p.airY=1;p.crouch=false}
- if(controls.cast&&p.projectileCooldown===0&&p.stamina>=25&&p.stun===0){
+ if(controls.special&&p.projectileCooldown===0&&p.stamina>=52&&p.stun===0){
+  p.stamina-=52;p.projectileCooldown=210;p.specialFrames=54;p.action=null;p.attack=0;
+  for(let i=0;i<12;i++){
+   const angle=(i/12)*Math.PI*2;
+   w.projectiles.push({x:p.x,y:218-p.airY,vx:Math.cos(angle)*5.5,vy:Math.sin(angle)*5.5,who:'p',kind:'fireball',life:78,damage:10});
+  }
+  events.push({type:'swing',who:'p',strike:'spin'});
+ }
+ if(controls.cast&&p.projectileCooldown===0&&p.stamina>=25&&p.stun===0&&p.specialFrames===0){
   p.stamina-=25;p.projectileCooldown=115;
   w.projectiles.push({x:p.x+p.face*50,y:226-p.airY,vx:p.face*7,who:'p',kind:'sword',life:115});
   events.push({type:'swing',who:'p',strike:'overhead'});
@@ -186,7 +195,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
     w.bufferedStrike!==p.action&&p.actionFrame>=ATTACKS[p.action].windup+ATTACKS[p.action].active+5){
    p.action=null;p.attack=0;p.actionFrame=0;p.didConnect=false;
  }
- if(w.bufferedStrike&&!p.action&&p.stun===0){
+ if(w.bufferedStrike&&!p.action&&p.stun===0&&p.specialFrames===0){
   initiate(p,w.bufferedStrike,'p',events);
   w.bufferedStrike=null;w.bufferFrames=0;
  }else if(w.bufferFrames>0){
@@ -194,18 +203,28 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
   if(!w.bufferFrames)w.bufferedStrike=null;
  }
  const distance=Math.abs(p.x-e.x);
- if(e.projectileCooldown===0&&e.stamina>=22&&distance>180&&random()<(w.difficulty==='easy'?.012:w.difficulty==='hard'?.043:.028)&&e.stun===0){
+ // Rare, clearly telegraphed blue hellstorm. Stronger than the barbarian's cyclone.
+ if(e.projectileCooldown===0&&e.stamina>=58&&e.stun===0&&distance<350&&random()<(w.difficulty==='easy'?.001:w.difficulty==='hard'?.004:.002)){
+  e.stamina-=58;e.projectileCooldown=290;e.specialFrames=70;e.action=null;e.attack=0;
+  for(let i=0;i<16;i++){
+   const angle=(i/16)*Math.PI*2;
+   w.projectiles.push({x:e.x,y:218-e.airY,vx:Math.cos(angle)*6.1,vy:Math.sin(angle)*6.1,who:'e',kind:'bluefire',life:90,damage:18});
+  }
+  events.push({type:'swing',who:'e',strike:'spin'});
+ }
+
+ if(e.projectileCooldown===0&&e.specialFrames===0&&e.stamina>=22&&distance>180&&random()<(w.difficulty==='easy'?.012:w.difficulty==='hard'?.043:.028)&&e.stun===0){
   e.stamina-=22;e.projectileCooldown=135;
   w.projectiles.push({x:e.x+e.face*48,y:220-e.airY,vx:e.face*5.8,who:'e',kind:'dragon',life:135});
  }
  if(e.airY===0&&e.stun===0&&distance<180&&random()<(w.difficulty==='easy'?.002:w.difficulty==='hard'?.009:.005)){e.airY=1;e.airV=10.5}
  for(const shot of w.projectiles){
-  shot.x+=shot.vx;shot.life--;
+  shot.x+=shot.vx;shot.y+=shot.vy||0;shot.life--;
   const target=shot.who==='p'?e:p;
   if(shot.life>0&&Math.abs(shot.x-target.x)<37&&Math.abs(shot.y-(225-target.airY))<78){
-   if(target.guard){target.stamina=Math.max(0,target.stamina-14);events.push({type:'block',who:shot.who})}
+   if(target.guard){target.stamina=Math.max(0,target.stamina-(shot.kind==='bluefire'?22:14));events.push({type:'block',who:shot.who})}
    else{
-    const damage=shot.kind==='dragon'?19:22;
+    const damage=shot.damage??(shot.kind==='dragon'?19:22);
     target.hp=Math.max(0,target.hp-damage);target.stun=Math.max(target.stun,17);
     target.action=null;target.attack=0;target.actionFrame=0;
     events.push({type:'hit',who:shot.who,damage});
@@ -218,7 +237,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
    shot.life=0;
   }
  }
- w.projectiles=w.projectiles.filter(q=>q.life>0&&q.x>-90&&q.x<890);
+ w.projectiles=w.projectiles.filter(q=>q.life>0&&q.x>-90&&q.x<890&&q.y>-90&&q.y<470);
  if(w.phase!=='fight')return events;
  e.guardTimer=Math.max(0,e.guardTimer-1);
  // Reconsider a tactical stance at irregular intervals, not every frame.
@@ -272,7 +291,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  }
  // Unpredictable attack decisions: defend, feint, wait, or strike.
  w.enemyCooldown--;
- if(w.enemyCooldown<=0&&!e.action&&e.stun===0){
+ if(w.enemyCooldown<=0&&!e.action&&e.stun===0&&e.specialFrames===0){
   const roll=random();
   if(incoming&&distance<200&&roll<(w.difficulty==='easy'?.17:w.difficulty==='hard'?.53:.38)){
    e.guardTimer=15+Math.floor(random()*20);
