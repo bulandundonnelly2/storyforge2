@@ -31,13 +31,18 @@ function serpent(c:CanvasRenderingContext2D,age:number,cx:number,side:number){
   // Heavy dark overlapping back plates and white underside give real volume.
   const plates=k===0?[-156,-48,-159,-82,-137,-98,-109,-99,-81,-88,-61,-69,-67,-56,-95,-48,-123,-48,-145,-66,-139,-83,-112,-87,-91,-77,-88,-67,-115,-68,-132,-79,-122,-91,-93,-89,-67,-71,-64,-48,-91,-34,-130,-36]:[-39,-52,-37,-85,-9,-103,27,-108,63,-101,91,-83,109,-59,107,-38,90,-30,85,-51,71,-77,50,-85,27,-74,12,-56,8,-39,-5,-36,-14,-51];
   poly(c,plates,BLACK);
-  // Hand-placed, tightly packed diamond scale highlights.
-  for(let row=0;row<8;row++)for(let col=0;col<13;col++){
-   const x=(k===0?-159:-36)+col*17+(row%2)*8;
-   const y=-97+row*9;
-   const allowed=k===0?(x<-63&&x>-172):(x>-42&&x<109);
-   if(allowed&&((row*7+col*11+k)%5!==0)){
-    px(c,x,y,5,2,WHITE);px(c,x+2,y+3,2,3,WHITE);
+  // Dense interlocking black-and-bone scale plates, similar to the Dire Wolf's fur detail.
+  for(let row=0;row<15;row++)for(let col=0;col<29;col++){
+   const x=(k===0?-174:-46)+col*9+(row%2)*4;
+   const y=-113+row*7;
+   const allowed=k===0?(x<-49&&x>-178):(x>-44&&x<117);
+   const shape=k===0?Math.pow((x+114)/76,2)+Math.pow((y+65)/56,2)<1:Math.pow((x-34)/91,2)+Math.pow((y+61)/62,2)<1;
+   if(allowed&&shape){
+    // Fine serrated scales: white ridge, black crescent and shadowed root.
+    px(c,x,y,6,2,WHITE);
+    px(c,x+2,y+2,5,2,BLACK);
+    if((row+col)%3===0)px(c,x+4,y+4,2,2,WHITE);
+    if((row*7+col)%17===0)px(c,x+1,y+3,2,2,RED);
    }
   }
   c.restore();
@@ -70,8 +75,18 @@ function serpent(c:CanvasRenderingContext2D,age:number,cx:number,side:number){
  poly(c,[20,11,51,14,77,13,71,16+gape,48,17+gape,24,14+gape],BLACK);
  px(c,20,10+gape,48,3,RED);
  for(let i=0;i<8;i++){const x=21+i*8;poly(c,[x,6,x+5,6,x+2,13],WHITE);poly(c,[x,13+gape,x+5,13+gape,x+3,8+gape],WHITE)}
- // Crisp 2px dithering across temple and lower cheek.
- for(let i=0;i<27;i++){const x=-25+(i*13)%51,y=-26+(i*7)%27;px(c,x,y,2,2,i%4===0?RED:BLACK)}
+ // Dire Wolf density: individually edged temple scales, brow ridges and cheek stippling.
+ for(let i=0;i<105;i++){const x=-27+(i*13)%90,y=-33+(i*7)%37;px(c,x,y,2,2,i%19===0?RED:i%4===0?WHITE:BLACK)}
+ for(let i=0;i<14;i++){
+  const x=-21+i*7,y=-32+Math.round(Math.sin(i*.75)*6);
+  px(c,x,y,8,2,WHITE);px(c,x+2,y+3,5,2,BLACK);
+ }
+ // Horned skull has distinct pixel spikes and ridged cheek scales.
+ for(let i=0;i<9;i++){
+  const x=-28+i*8;
+  poly(c,[x,-35,x+3,-47-(i%3)*4,x+8,-33],WHITE);
+  px(c,x+3,-34,3,3,BLACK);
+ }
  c.restore();
  if(age>=148&&age<185){for(let i=0;i<7;i++){const x=headX+70+(i%3)*13,y=headY+12+(i-3)*10;px(c,x,y,4+(i%2)*3,4,i%3===0?WHITE:RED)}}
  c.restore();
