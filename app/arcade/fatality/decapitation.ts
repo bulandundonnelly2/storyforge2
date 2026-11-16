@@ -125,11 +125,31 @@ export function drawDecapitation(ctx:CanvasRenderingContext2D,w:World,age:number
  // Compact title above the action; no rectangle crosses the fighters.
  if(age>=228){
   const alpha=ease((age-228)/12);
-  block(ctx,220,38,360,92,'rgba(0,0,0,'+(.72*alpha).toFixed(3)+')');
+
   ctx.save();ctx.globalAlpha=alpha;ctx.textAlign='center';
   ctx.fillStyle=WHITE;ctx.font='bold 48px monospace';ctx.fillText('FATALITY',400,92);
   ctx.fillStyle=RED;ctx.font='bold 17px monospace';ctx.fillText('DECAPITATION',400,122);
   ctx.restore();
+  drawTitleDrips(ctx,age-228,400,123,170);
+ }
+ ctx.restore();
+}
+
+
+// 4px-aligned red-water drips directly under the lettering; never draw a backdrop.
+function drawTitleDrips(ctx:CanvasRenderingContext2D,age:number,cx:number,baseline:number,width:number){
+ ctx.save();ctx.imageSmoothingEnabled=false;
+ const count=Math.floor(width/12);
+ for(let i=0;i<count;i++){
+  const delay=8+(i*17)%42;
+  const t=age-delay;if(t<=0)continue;
+  const x=Math.round((cx-width/2+i*12)/4)*4;
+  const length=Math.min(42,Math.floor(t*.7/4)*4);
+  if(length<4)continue;
+  ctx.fillStyle=i%4===0?'#9b0d2a':'#ef2148';
+  ctx.fillRect(x,baseline,4,length);
+  ctx.fillRect(x-2,baseline+length,8,4);
+  if(t>65){const fall=(t-65)*2%50;ctx.fillRect(x,baseline+length+fall,4,8)}
  }
  ctx.restore();
 }
