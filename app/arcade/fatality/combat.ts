@@ -6,7 +6,7 @@ export type Fighter={
  x:number;vx:number;hp:number;stamina:number;face:number;
  attack:number;attackStart:number;heavy:boolean;action:Strike|null;actionFrame:number;didConnect:boolean;
  stun:number;guard:boolean;guardLow:boolean;guardFrames:number;guardTimer:number;
- crouch:boolean;walk:number;walkClock:number;airY:number;airV:number;projectileCooldown:number;
+ crouch:boolean;walk:number;walkClock:number;airY:number;airV:number;projectileCooldown:number;aiMode:'approach'|'retreat'|'hold'|'bait'|'rush';aiTimer:number;
 };
 export type World={
  p:Fighter;e:Fighter;phase:'fight'|'finish'|'fatality'|'enemyFatality'|'win'|'lose';
@@ -24,7 +24,7 @@ const fighter=(x:number,face:number):Fighter=>({
  x,vx:0,hp:180,stamina:100,face,
  attack:0,attackStart:0,heavy:false,action:null,actionFrame:0,didConnect:false,
  stun:0,guard:false,guardLow:false,guardFrames:0,guardTimer:0,
- crouch:false,walk:-1,walkClock:0,airY:0,airV:0,projectileCooldown:0
+ crouch:false,walk:-1,walkClock:0,airY:0,airV:0,projectileCooldown:0,aiMode:'hold',aiTimer:50
 });
 export function createDuel():World{
  return {p:fighter(233,1),e:fighter(567,-1),phase:'fight',time:0,frame:0,fx:0,step:0,combo:0,enemyCooldown:76,
@@ -208,11 +208,42 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  w.projectiles=w.projectiles.filter(q=>q.life>0&&q.x>-90&&q.x<890);
  if(w.phase!=='fight')return events;
  e.guardTimer=Math.max(0,e.guardTimer-1);
- // Opponent walks deliberately into sword range rather than teleporting to the player.
+ // Reconsider a tactical stance at irregular intervals, not every frame.
+ // Holding ground, backing off and baiting attacks are as important as advancing.
+ if(e.aiTimer--<=0){
+  const roll=random();
+  e.aiMode=roll<.24?'hold':roll<.48?'retreat':roll<.68?'bait':roll<.86?'approach':'rush';
+  e.aiTimer=32+Math.floor(random()*87);
+ }
  let enemyMove=0;
+ const toward=p.x>e.x?1:-1;
+ const incoming=!!p.action&&p.actionFrame<ATTACKS[p.action].windup+ATTACKS[p.action].active;
  if(!e.action&&e.stun===0){
-    if(distance>151)enemyMove=p.x>e.x?1:-1;
-    else if(distance<106)enemyMove=p.x>e.x?-1:1;
+  switch(e.aiMode){
+   case 'hold':
+    // Stand firm and punish the player's approach.
+    enemyMove=distance<90?-toward:0;
+    break;
+   case 'retreat':
+    enemyMove=distance<350?-toward:0;
+    break;
+   case 'bait':
+    enemyMove=incoming&&distance<235?-toward:distance>240?toward:0;
+    if(incoming&&distance<195&&e.guardTimer===0&&random()<.12)e.guardTimer=20;
+    break;
+   case 'rush':
+    enemyMove=distance>116?toward:distance<80?-toward:0;
+    break;
+   default:
+    enemyMove=distance>165?toward:distance<105?-toward:0;
+  }
+  // Sometimes break off an advance to evade an overhead attack.
+  if(incoming&&p.action==='overhead'&&distance<195&&random()<.045)enemyMove=-toward;
+  // Avoid getting pinned against arena edges forever.
+  if(e.x<110&&enemyMove<0||e.x>690&&enemyMove>0){
+   enemyMove=distance>175?toward:0;
+   if(e.aiMode==='retreat')e.aiTimer=Math.min(e.aiTimer,18);
+  }
  }
  posture(e,enemyMove,e.guardTimer>0,e.guardTimer>0&&p.action==='low');
  // On the first active sword frame, push off the planted foot.
@@ -224,21 +255,25 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
    f.vx=f.face*(f.action==='overhead'?2.2:1.7);
   }
  }
- // AI looks for counter opportunities and telegraphs committed attacks.
+ // Unpredictable attack decisions: defend, feint, wait, or strike.
  w.enemyCooldown--;
  if(w.enemyCooldown<=0&&!e.action&&e.stun===0){
-    if(p.action&&p.actionFrame<ATTACKS[p.action].windup&&random()<.27){
-       e.guardTimer=22;e.guard=true;e.guardFrames=1;
-       e.guardLow=p.action==='low';
-       w.enemyCooldown=43+Math.floor(random()*27);
-    }else if(distance<187&&e.stamina>22){
-       const roll=random();
-       const strike:Strike=roll<.22?'low':roll<.53?'overhead':'body';
-       initiate(e,strike,'e',events);
-       w.enemyCooldown=61+Math.floor(random()*32);
-    }else{
-       w.enemyCooldown=21+Math.floor(random()*18);
-    }
+  const roll=random();
+  if(incoming&&distance<200&&roll<.38){
+   e.guardTimer=15+Math.floor(random()*20);
+   e.guard=true;e.guardFrames=1;e.guardLow=p.action==='low';
+   w.enemyCooldown=18+Math.floor(random()*27);
+  }else if(distance<187&&e.stamina>22&&roll<.76){
+   const strikeRoll=random();
+   const strike:Strike=strikeRoll<.3?'low':strikeRoll<.63?'overhead':'body';
+   initiate(e,strike,'e',events);
+   w.enemyCooldown=36+Math.floor(random()*90);
+   if(random()<.3){e.aiMode='retreat';e.aiTimer=35+Math.floor(random()*50)}
+  }else{
+   // A deliberate pause prevents an endless attack-and-walk-forward loop.
+   w.enemyCooldown=20+Math.floor(random()*60);
+   if(distance<150&&random()<.38){e.aiMode='retreat';e.aiTimer=28+Math.floor(random()*55)}
+  }
  }
  if(p.x<e.x&&e.x-p.x<113){const mid=(p.x+e.x)/2;p.x=mid-56.5;e.x=mid+56.5;p.vx=Math.min(p.vx,0);e.vx=Math.max(e.vx,0)}
  if(e.x<p.x&&p.x-e.x<113){const mid=(p.x+e.x)/2;e.x=mid-56.5;p.x=mid+56.5;e.vx=Math.min(e.vx,0);p.vx=Math.max(p.vx,0)}
