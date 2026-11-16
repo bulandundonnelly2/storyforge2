@@ -1,6 +1,6 @@
 // Original, timing-led duel engine for Fatality Forge. No third-party sprites or audio.
 export type Side='p'|'e';
-export type Strike='body'|'overhead'|'low';
+export type Strike='body'|'overhead'|'low'|'thrust'|'spin'|'uppercut';
 export type CombatEvent={type:'windup'|'swing'|'hit'|'block'|'parry'|'guardBreak'|'finish'|'enemyFinisher'|'lose'|'win'|'exhausted'|'finisherCharge'|'finisherSmash'|'finisherFinal'|'wolfGrowl'|'wolfBite';who:Side;strike?:Strike;damage?:number};
 export type Fighter={
  x:number;vx:number;hp:number;stamina:number;face:number;
@@ -18,7 +18,10 @@ export type Controls={direction:number;guard:boolean;crouch:boolean;jump?:boolea
 export const ATTACKS:Record<Strike,{windup:number;active:number;recovery:number;damage:number;reach:number;cost:number;push:number;hitstop:number}>={
  body:{windup:9,active:6,recovery:17,damage:13,reach:156,cost:15,push:21,hitstop:7},
  overhead:{windup:17,active:7,recovery:25,damage:21,reach:173,cost:29,push:32,hitstop:10},
- low:{windup:12,active:7,recovery:20,damage:12,reach:153,cost:20,push:23,hitstop:8}
+ low:{windup:12,active:7,recovery:20,damage:12,reach:153,cost:20,push:23,hitstop:8},
+ thrust:{windup:8,active:5,recovery:19,damage:11,reach:198,cost:19,push:26,hitstop:7},
+ spin:{windup:19,active:12,recovery:28,damage:24,reach:165,cost:38,push:38,hitstop:11},
+ uppercut:{windup:13,active:6,recovery:24,damage:18,reach:143,cost:27,push:29,hitstop:10}
 };
 const fighter=(x:number,face:number):Fighter=>({
  x,vx:0,hp:180,stamina:100,face,
@@ -40,7 +43,7 @@ function initiate(f:Fighter,strike:Strike|null,who:Side,events:CombatEvent[]){
  if(f.stamina<move.cost){if(who==='p')events.push({type:'exhausted',who});return false}
  f.stamina-=move.cost;f.action=strike;f.actionFrame=0;f.didConnect=false;
  f.attackStart=move.windup+move.active+move.recovery;
- f.attack=f.attackStart;f.heavy=strike==='overhead';
+ f.attack=f.attackStart;f.heavy=strike==='overhead'||strike==='spin'||strike==='uppercut';
  f.guard=false;f.crouch=false;f.vx*=.18;
  // The quiet anticipation is distinct from the blade whoosh at actual contact.
  events.push({type:'windup',who,strike});
@@ -71,7 +74,7 @@ function clash(w:World,attacker:Fighter,defender:Fighter,who:Side,events:CombatE
  if(Math.abs(attacker.x-defender.x)>data.reach)return;
  attacker.didConnect=true;
  // A crouching duelist can duck a telegraphed overhead, but not a body or leg chop.
- if(strike==='overhead'&&defender.crouch&&!defender.guard){events.push({type:'block',who,strike});return}
+ if((strike==='overhead'||strike==='thrust')&&defender.crouch&&!defender.guard){events.push({type:'block',who,strike});return}
  const guarded=defender.guard&&(strike==='low'?defender.guardLow:!defender.guardLow);
  const perfect=guarded&&defender.guardFrames<=11&&defender.guardFrames>=1;
  const impulse=attacker.x<defender.x?1:-1;
@@ -94,7 +97,7 @@ function clash(w:World,attacker:Fighter,defender:Fighter,who:Side,events:CombatE
  defender.hp=Math.max(0,defender.hp-damage);
  attacker.comboHits=chain;attacker.comboWindow=88;
  defender.comboHits=0;defender.comboWindow=0;
- defender.stun=Math.max(defender.stun,strike==='overhead'?32:strike==='body'?23:21);
+ defender.stun=Math.max(defender.stun,strike==='overhead'||strike==='spin'?32:strike==='uppercut'?29:strike==='body'?23:21);
  defender.action=null;defender.actionFrame=0;defender.didConnect=false;
  defender.attack=0;defender.attackStart=0;defender.heavy=false;
  // The body takes a short step and slows under friction instead of sliding.
@@ -102,7 +105,7 @@ function clash(w:World,attacker:Fighter,defender:Fighter,who:Side,events:CombatE
  defender.x=clamp(defender.x+impulse*(data.push*.18),95,705);
  attacker.vx*=.20;
  w.freeze=data.hitstop+(counter?2:0);w.shake=data.hitstop+6;
- w.impactX=defender.x-impulse*22;w.impactY=strike==='low'?272:strike==='overhead'?176:214;
+ w.impactX=defender.x-impulse*22;w.impactY=strike==='low'?272:strike==='overhead'||strike==='uppercut'?176:214;
  w.impactKind='hit';w.fx=21;
  events.push({type:'hit',who,strike,damage});
  if(defender.hp===0){
@@ -262,7 +265,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  // The quick committed step reads as a heavy cut, not a floating swipe.
  for(const f of [p,e]){
   if(f.action&&f.actionFrame===ATTACKS[f.action].windup){
-   const thrust=f.action==='overhead'?15:f.action==='body'?11:9;
+   const thrust=f.action==='thrust'?23:f.action==='spin'?13:f.action==='overhead'?15:f.action==='body'?11:9;
    f.x=clamp(f.x+f.face*thrust,85,715);
    f.vx=f.face*(f.action==='overhead'?2.2:1.7);
   }
@@ -277,7 +280,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
    w.enemyCooldown=(w.difficulty==='easy'?38:w.difficulty==='hard'?13:18)+Math.floor(random()*27);
   }else if(distance<187&&e.stamina>22&&roll<.76){
    const strikeRoll=random();
-   const strike:Strike=strikeRoll<.3?'low':strikeRoll<.63?'overhead':'body';
+   const strike:Strike=strikeRoll<.20?'low':strikeRoll<.43?'overhead':strikeRoll<.62?'body':strikeRoll<.79?'thrust':strikeRoll<.92?'uppercut':'spin';
    initiate(e,strike,'e',events);
    w.enemyCooldown=(w.difficulty==='easy'?70:w.difficulty==='hard'?22:36)+Math.floor(random()*(w.difficulty==='hard'?55:90));
    if(random()<.3){e.aiMode='retreat';e.aiTimer=35+Math.floor(random()*50)}
