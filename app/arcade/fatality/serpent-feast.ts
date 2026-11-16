@@ -126,6 +126,29 @@ function drawSprite(c:CanvasRenderingContext2D,age:number,cx:number,side:number)
  c.restore();return true;
 }
 
+
+// Separate upper and lower halves of the barbarian during the finishing bite.
+// Clipping the existing detailed fighter artwork preserves the Dire Wolf pixel style.
+function tornVictim(ctx:CanvasRenderingContext2D,actor:SerpentActor,age:number,x:number,side:number){
+ const split=ease((age-153)/16),scatter=ease((age-168)/27);
+ const upperX=x-side*(10*split+54*scatter),lowerX=x+side*(13*split+34*scatter);
+ const upperY=346-32*split-57*scatter,lowerY=346+18*scatter;
+ const seamY=265;
+ ctx.save();ctx.beginPath();ctx.rect(0,0,800,seamY);ctx.clip();
+ actor('barbarian',15,upperX,upperY,188,side*(-.24*split-.48*scatter),1-ease((age-198)/15));
+ ctx.restore();
+ ctx.save();ctx.beginPath();ctx.rect(0,seamY,800,400-seamY);ctx.clip();
+ actor('barbarian',15,lowerX,lowerY,188,side*(.16*split+.9*scatter),1-ease((age-198)/15));
+ ctx.restore();
+ // Pixelated red separation and falling droplets, no extra skull prop.
+ for(let i=0;i<22;i++){
+  const phase=i*2.399+age*.13,travel=(7+i%6*5)*split;
+  const bx=x+Math.cos(phase)*travel+side*(i%3-1)*scatter*22;
+  const by=seamY+Math.sin(phase)*travel+(age-153)*(.2+(i%4)*.12)*split;
+  if(age>=153&&age<202)px(ctx,bx,by,3+(i%3)*2,3+(i%2)*3,i%5===0?WHITE:RED);
+ }
+}
+
 export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number,actor:SerpentActor){
  // The skeletal knight transforms on screen, coils around the barbarian, then swallows him.
  const side=w.p.x>=w.e.x?1:-1;
@@ -153,20 +176,16 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   if(!drawSprite(ctx,age,cx-side*43,side))serpent(ctx,age,cx-side*43,side);
   ctx.restore();
  }
- // The barbarian remains visible throughout the grab and tightening coils.
- if(age<191){
-  const panic=age>=106&&age<153?Math.sin(age*.42)*4:0;
+ // The opponent is gripped, then visibly torn into two separate animated pieces.
+ if(age<153){
+  const panic=age>=106?Math.sin(age*.42)*4:0;
   const lift=age>=124?ease((age-124)/29)*32:0;
-  const swallow=ease((age-160)/30);
-  // During swallowing, the victim moves into the open mouth and gets smaller.
-  const mouthX=cx+side*102;
-  const x=victimX+(mouthX-victimX)*swallow;
-  const size=188*(1-.90*swallow);
-  const ground=346-lift-90*swallow;
-  if(age<160||swallow<.99)actor('barbarian',age<107?0:age<148?12:15,x+panic,ground,size,side*swallow*.75,1);
+  actor('barbarian',age<107?0:12,victimX+panic,346-lift,188,0,1);
+ }else if(age<215){
+  tornVictim(ctx,actor,age,victimX,side);
  }
  // The atlas itself supplies the coils; do not overlay the old three-bar constriction effect.
- // 160-194: the serpent's jaws engulf the last visible part of the victim.
+ // 160-194: jaws close as the two halves separate; no detached skull is drawn.
  if(age>=158&&age<195){
   const swallow=ease((age-158)/36);
   const mouthX=cx+side*102,mouthY=207;
