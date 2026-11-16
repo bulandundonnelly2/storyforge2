@@ -1,9 +1,17 @@
 // Original, timing-led duel engine for Fatality Forge. No third-party sprites or audio.
 export type Side='p'|'e';
+export type Character='barbarian'|'knight'|'vampire'|'warden'|'sorcerer';
+export const ROSTER:Record<Character,{name:string;special:string;fatality:string;speed:number;power:number;projectile:'sword'|'dragon'|'blood'|'thorn'|'flame'}>={
+ barbarian:{name:'BARBARIAN',special:'FIRE SWORD',fatality:'DECAPITATION',speed:1.08,power:1.05,projectile:'sword'},
+ knight:{name:'SKELETON KNIGHT',special:'DRAGON FIRE',fatality:'SERPENT FEAST',speed:1,power:1,projectile:'dragon'},
+ vampire:{name:'VAMPIRE LORD',special:'BLOOD LANCE',fatality:'CRIMSON EMBRACE',speed:1.17,power:.93,projectile:'blood'},
+ warden:{name:'FOREST WARDEN',special:'THORN STORM',fatality:'ROOT ENTOMBMENT',speed:.96,power:1.13,projectile:'thorn'},
+ sorcerer:{name:'FIRE SORCERER',special:'INFERNO',fatality:'ASHES TO ASHES',speed:1.04,power:.98,projectile:'flame'}
+};
 export type Strike='body'|'overhead'|'low'|'thrust'|'spin'|'uppercut';
 export type CombatEvent={type:'windup'|'swing'|'hit'|'block'|'parry'|'guardBreak'|'finish'|'enemyFinisher'|'lose'|'win'|'exhausted'|'finisherCharge'|'finisherSmash'|'finisherFinal'|'wolfGrowl'|'wolfBite';who:Side;strike?:Strike;damage?:number};
 export type Fighter={
- x:number;vx:number;hp:number;stamina:number;face:number;
+ x:number;vx:number;hp:number;stamina:number;face:number;character:Character;
  attack:number;attackStart:number;heavy:boolean;action:Strike|null;actionFrame:number;didConnect:boolean;
  stun:number;guard:boolean;guardLow:boolean;guardFrames:number;guardTimer:number;
  crouch:boolean;walk:number;walkClock:number;airY:number;airV:number;projectileCooldown:number;comboHits:number;comboWindow:number;aiMode:'approach'|'retreat'|'hold'|'bait'|'rush';aiTimer:number;
@@ -12,7 +20,7 @@ export type World={
  p:Fighter;e:Fighter;phase:'fight'|'finish'|'fatality'|'enemyFatality'|'win'|'lose';
  time:number;frame:number;fx:number;step:number;combo:number;enemyCooldown:number;finisherDone?:boolean;enemyFinisherDone?:boolean;
  freeze:number;shake:number;impactX:number;impactY:number;impactKind:'hit'|'block'|'parry'|null;
- bufferedStrike:Strike|null;bufferFrames:number;projectiles:{x:number;y:number;vx:number;who:Side;kind:'sword'|'dragon';life:number}[];difficulty:'easy'|'normal'|'hard';
+ bufferedStrike:Strike|null;bufferFrames:number;projectiles:{x:number;y:number;vx:number;who:Side;kind:'sword'|'dragon'|'blood'|'thorn'|'flame';life:number}[];difficulty:'easy'|'normal'|'hard';
 };
 export type Controls={direction:number;guard:boolean;crouch:boolean;jump?:boolean;cast?:boolean;strike:Strike|null};
 export const ATTACKS:Record<Strike,{windup:number;active:number;recovery:number;damage:number;reach:number;cost:number;push:number;hitstop:number}>={
@@ -23,14 +31,14 @@ export const ATTACKS:Record<Strike,{windup:number;active:number;recovery:number;
  spin:{windup:19,active:12,recovery:28,damage:24,reach:165,cost:38,push:38,hitstop:11},
  uppercut:{windup:13,active:6,recovery:24,damage:18,reach:143,cost:27,push:29,hitstop:10}
 };
-const fighter=(x:number,face:number):Fighter=>({
- x,vx:0,hp:180,stamina:100,face,
+const fighter=(x:number,face:number,character:Character):Fighter=>({
+ x,vx:0,hp:180,stamina:100,face,character,
  attack:0,attackStart:0,heavy:false,action:null,actionFrame:0,didConnect:false,
  stun:0,guard:false,guardLow:false,guardFrames:0,guardTimer:0,
  crouch:false,walk:-1,walkClock:0,airY:0,airV:0,projectileCooldown:0,comboHits:0,comboWindow:0,aiMode:'hold',aiTimer:50
 });
-export function createDuel(difficulty:'easy'|'normal'|'hard'='normal'):World{
- return {p:fighter(233,1),e:fighter(567,-1),phase:'fight',time:0,frame:0,fx:0,step:0,combo:0,enemyCooldown:76,
+export function createDuel(difficulty:'easy'|'normal'|'hard'='normal',player:Character='barbarian',opponent:Character='knight'):World{
+ return {p:fighter(233,1,player),e:fighter(567,-1,opponent),phase:'fight',time:0,frame:0,fx:0,step:0,combo:0,enemyCooldown:76,
  freeze:0,shake:0,impactX:400,impactY:225,impactKind:null,finisherDone:false,enemyFinisherDone:false,bufferedStrike:null,bufferFrames:0,projectiles:[],difficulty};
 }
 function clamp(n:number,lo:number,hi:number){return Math.max(lo,Math.min(hi,n))}
@@ -57,7 +65,7 @@ function posture(f:Fighter,move:number,guard:boolean,crouch:boolean){
  f.guardFrames=f.guard?f.guardFrames+1:0;
  if(f.guard){f.stamina=clamp(f.stamina-.22,0,100)}
  else f.stamina=clamp(f.stamina+(f.action?0.2:f.stun>0?0.16:Math.abs(move)>0?0.31:0.49),0,100);
- const velocityLimit=f.guard?0.48:f.crouch?0.68:f.action?0.36:f.stun>0?0:3.05;
+ const velocityLimit=(f.guard?0.48:f.crouch?0.68:f.action?0.36:f.stun>0?0:3.05)*ROSTER[f.character].speed;
  const desired=clamp(move,-1,1)*velocityLimit;
  // Deliberate starts, firmer deceleration. Recoil stops rather than skating.
  const braking=f.stun>0?.72:f.action?.52:move===0?.56:.43;
@@ -93,7 +101,7 @@ function clash(w:World,attacker:Fighter,defender:Fighter,who:Side,events:CombatE
  // Counter-hits interrupt the enemy's wind-up: no attacks landing while staggered.
  const counter=!!defender.action&&!defender.didConnect;
  const chain=attacker.comboWindow>0?Math.min(4,attacker.comboHits+1):1;
- const damage=data.damage+(counter?3:0)+(attacker.airY>12?7:0)+(chain>=4?7:chain===3?5:chain===2?2:0);
+ const damage=Math.round((data.damage+(counter?3:0)+(attacker.airY>12?7:0)+(chain>=4?7:chain===3?5:chain===2?2:0))*ROSTER[attacker.character].power);
  defender.hp=Math.max(0,defender.hp-damage);
  attacker.comboHits=chain;attacker.comboWindow=88;
  defender.comboHits=0;defender.comboWindow=0;
@@ -169,7 +177,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  if(controls.jump&&p.airY===0&&p.stun===0){p.airV=12.6;p.airY=1;p.crouch=false}
  if(controls.cast&&p.projectileCooldown===0&&p.stamina>=25&&p.stun===0){
   p.stamina-=25;p.projectileCooldown=115;
-  w.projectiles.push({x:p.x+p.face*50,y:226-p.airY,vx:p.face*7,who:'p',kind:'sword',life:115});
+  w.projectiles.push({x:p.x+p.face*50,y:226-p.airY,vx:p.face*7,who:'p',kind:ROSTER[p.character].projectile,life:115});
   events.push({type:'swing',who:'p',strike:'overhead'});
  }
  progress(p);progress(e);
@@ -196,7 +204,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  const distance=Math.abs(p.x-e.x);
  if(e.projectileCooldown===0&&e.stamina>=22&&distance>180&&random()<(w.difficulty==='easy'?.012:w.difficulty==='hard'?.043:.028)&&e.stun===0){
   e.stamina-=22;e.projectileCooldown=135;
-  w.projectiles.push({x:e.x+e.face*48,y:220-e.airY,vx:e.face*5.8,who:'e',kind:'dragon',life:135});
+  w.projectiles.push({x:e.x+e.face*48,y:220-e.airY,vx:e.face*5.8,who:'e',kind:ROSTER[e.character].projectile,life:135});
  }
  if(e.airY===0&&e.stun===0&&distance<180&&random()<(w.difficulty==='easy'?.002:w.difficulty==='hard'?.009:.005)){e.airY=1;e.airV=10.5}
  for(const shot of w.projectiles){
@@ -205,7 +213,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
   if(shot.life>0&&Math.abs(shot.x-target.x)<37&&Math.abs(shot.y-(225-target.airY))<78){
    if(target.guard){target.stamina=Math.max(0,target.stamina-14);events.push({type:'block',who:shot.who})}
    else{
-    const damage=shot.kind==='dragon'?19:22;
+    const damage=Math.round((shot.kind==='dragon'?19:shot.kind==='thorn'?17:shot.kind==='blood'?18:shot.kind==='flame'?24:22)*ROSTER[shot.who==='p'?p.character:e.character].power);
     target.hp=Math.max(0,target.hp-damage);target.stun=Math.max(target.stun,17);
     target.action=null;target.attack=0;target.actionFrame=0;
     events.push({type:'hit',who:shot.who,damage});
