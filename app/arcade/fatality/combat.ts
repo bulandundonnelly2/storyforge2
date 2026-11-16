@@ -16,9 +16,9 @@ export type World={
 };
 export type Controls={direction:number;guard:boolean;crouch:boolean;jump?:boolean;cast?:boolean;strike:Strike|null};
 export const ATTACKS:Record<Strike,{windup:number;active:number;recovery:number;damage:number;reach:number;cost:number;push:number;hitstop:number}>={
- body:{windup:12,active:5,recovery:22,damage:13,reach:156,cost:17,push:21,hitstop:9},
- overhead:{windup:20,active:6,recovery:31,damage:21,reach:173,cost:33,push:32,hitstop:13},
- low:{windup:15,active:6,recovery:26,damage:12,reach:153,cost:23,push:23,hitstop:10}
+ body:{windup:9,active:6,recovery:17,damage:13,reach:156,cost:15,push:21,hitstop:7},
+ overhead:{windup:17,active:7,recovery:25,damage:21,reach:173,cost:29,push:32,hitstop:10},
+ low:{windup:12,active:7,recovery:20,damage:12,reach:153,cost:20,push:23,hitstop:8}
 };
 const fighter=(x:number,face:number):Fighter=>({
  x,vx:0,hp:180,stamina:100,face,
@@ -54,10 +54,10 @@ function posture(f:Fighter,move:number,guard:boolean,crouch:boolean){
  f.guardFrames=f.guard?f.guardFrames+1:0;
  if(f.guard){f.stamina=clamp(f.stamina-.22,0,100)}
  else f.stamina=clamp(f.stamina+(f.action?0.2:f.stun>0?0.16:Math.abs(move)>0?0.31:0.49),0,100);
- const velocityLimit=f.guard?0.37:f.crouch?0.53:f.action?0.25:f.stun>0?0:2.30;
+ const velocityLimit=f.guard?0.48:f.crouch?0.68:f.action?0.36:f.stun>0?0:3.05;
  const desired=clamp(move,-1,1)*velocityLimit;
  // Deliberate starts, firmer deceleration. Recoil stops rather than skating.
- const braking=f.stun>0?.58:f.action?.42:move===0?.31:.24;
+ const braking=f.stun>0?.72:f.action?.52:move===0?.56:.43;
  f.vx=approach(f.vx,desired,braking);
  if(Math.abs(f.vx)<.065)f.vx=0;
  f.x=clamp(f.x+f.vx,85,715);
@@ -89,10 +89,10 @@ function clash(w:World,attacker:Fighter,defender:Fighter,who:Side,events:CombatE
  }
  // Counter-hits interrupt the enemy's wind-up: no attacks landing while staggered.
  const counter=!!defender.action&&!defender.didConnect;
- const chain=attacker.comboWindow>0?Math.min(3,attacker.comboHits+1):1;
- const damage=data.damage+(counter?3:0)+(attacker.airY>12?7:0)+(chain>=3?5:chain===2?2:0);
+ const chain=attacker.comboWindow>0?Math.min(4,attacker.comboHits+1):1;
+ const damage=data.damage+(counter?3:0)+(attacker.airY>12?7:0)+(chain>=4?7:chain===3?5:chain===2?2:0);
  defender.hp=Math.max(0,defender.hp-damage);
- attacker.comboHits=chain;attacker.comboWindow=105;
+ attacker.comboHits=chain;attacker.comboWindow=88;
  defender.comboHits=0;defender.comboWindow=0;
  defender.stun=Math.max(defender.stun,strike==='overhead'?32:strike==='body'?23:21);
  defender.action=null;defender.actionFrame=0;defender.didConnect=false;
@@ -151,7 +151,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  }
  // Accept taps even during impact freeze or attack recovery. One short buffer
  // prevents dropped input without making long queued auto-combos.
- if(controls.strike){w.bufferedStrike=controls.strike;w.bufferFrames=22}
+ if(controls.strike){w.bufferedStrike=controls.strike;w.bufferFrames=32}
  w.frame++;w.time++;
  if(w.freeze>0){w.freeze--;return events}
  if(w.fx>0)w.fx--;
@@ -163,7 +163,7 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
   if(f.projectileCooldown>0)f.projectileCooldown--;
   if(f.airY>0||f.airV>0){f.airY=Math.max(0,f.airY+f.airV);f.airV-=.73;if(f.airY===0)f.airV=0}
  }
- if(controls.jump&&p.airY===0&&p.stun===0){p.airV=11.8;p.airY=1;p.crouch=false}
+ if(controls.jump&&p.airY===0&&p.stun===0){p.airV=12.6;p.airY=1;p.crouch=false}
  if(controls.cast&&p.projectileCooldown===0&&p.stamina>=25&&p.stun===0){
   p.stamina-=25;p.projectileCooldown=115;
   w.projectiles.push({x:p.x+p.face*50,y:226-p.airY,vx:p.face*7,who:'p',kind:'sword',life:115});
@@ -177,6 +177,12 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  }
  const playerMove=controls.direction;
  posture(p,playerMove,controls.guard,controls.crouch);
+ // A landed hit can chain into another distinct move near the end of recovery.
+ // The previous strike must connect; missed swings retain their full recovery.
+ if(w.bufferedStrike&&p.action&&p.didConnect&&p.stun===0&&
+    w.bufferedStrike!==p.action&&p.actionFrame>=ATTACKS[p.action].windup+ATTACKS[p.action].active+5){
+   p.action=null;p.attack=0;p.actionFrame=0;p.didConnect=false;
+ }
  if(w.bufferedStrike&&!p.action&&p.stun===0){
   initiate(p,w.bufferedStrike,'p',events);
   w.bufferedStrike=null;w.bufferFrames=0;
@@ -216,7 +222,9 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
  // Holding ground, backing off and baiting attacks are as important as advancing.
  if(e.aiTimer--<=0){
   const roll=random();
-  e.aiMode=roll<.24?'hold':roll<.48?'retreat':roll<.68?'bait':roll<.86?'approach':'rush';
+  // At low health the knight mixes in evasive play instead of simply rushing.
+  const defensive=e.hp<65;
+  e.aiMode=defensive?(roll<.34?'retreat':roll<.62?'bait':roll<.78?'hold':roll<.91?'approach':'rush'):(roll<.20?'hold':roll<.42?'retreat':roll<.65?'bait':roll<.85?'approach':'rush');
   e.aiTimer=(w.difficulty==='hard'?20:w.difficulty==='easy'?55:32)+Math.floor(random()*(w.difficulty==='hard'?65:87));
  }
  let enemyMove=0;
