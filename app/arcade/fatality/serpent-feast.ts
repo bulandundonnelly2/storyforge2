@@ -215,13 +215,37 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   actor('barbarian',age<107?0:12,victimX+panic,346-lift,188,0,1);
  }
  if(age>=143)bloodBurst(ctx,age,victimX,260);
- // 196-215: full-bellied serpent recoils and settles; only then reveal the title.
+ // Unboxed 8-bit title: sharp bitmap lettering and red liquid dripping from the glyphs.
  if(age>=214){
-  const a=ease((age-214)/17);
-  px(ctx,218,46,364,92,'rgba(0,0,0,'+(.9*a)+')');
-  ctx.globalAlpha=a;ctx.textAlign='center';ctx.fillStyle=WHITE;ctx.font='bold 48px monospace';
-  ctx.fillText('FATALITY',400,92);ctx.fillStyle=RED;ctx.font='bold 18px monospace';
-  ctx.fillText('SERPENT FEAST',400,124);ctx.globalAlpha=1;
+  const reveal=ease((age-214)/16),t=age-214;
+  const title=document.createElement('canvas');
+  title.width=360;title.height=82;
+  const g=title.getContext('2d');
+  if(g){
+   g.textAlign='center';g.textBaseline='top';
+   g.fillStyle=WHITE;g.font='bold 46px monospace';g.fillText('FATALITY',180,0);
+   g.fillStyle=RED;g.font='bold 18px monospace';g.fillText('SERPENT FEAST',180,54);
+   ctx.save();ctx.globalAlpha=reveal;ctx.imageSmoothingEnabled=false;
+   // Render at half resolution then enlarge: authentic blocky, stepped letter edges.
+   const pixel=document.createElement('canvas');pixel.width=180;pixel.height=41;
+   const pg=pixel.getContext('2d');
+   if(pg){
+    pg.imageSmoothingEnabled=false;pg.drawImage(title,0,0,180,41);
+    ctx.drawImage(pixel,220,36,360,82);
+    // Red drips start directly beneath the smaller red text, with no backdrop.
+    for(let i=0;i<24;i++){
+     const x=263+i*12;
+     const dropDelay=(i*11)%35;
+     const length=Math.min(44,Math.max(0,(t-dropDelay)*.65));
+     if(length<4)continue;
+     const bottom=113+length;
+     px(ctx,x,112,4,length,i%5===0?'#9a0c29':RED);
+     px(ctx,x-2,bottom,8,4,RED);
+     if(t>dropDelay+48)px(ctx,x+2,bottom+6+((t-dropDelay)*2)%37,4,6,RED);
+    }
+   }
+   ctx.restore();
+  }
  }
  ctx.restore();
 }
