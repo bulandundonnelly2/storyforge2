@@ -130,34 +130,52 @@ function drawSprite(c:CanvasRenderingContext2D,age:number,cx:number,side:number)
 // Impact: one clear bite, then an enormous pixel-red splash and spreading floor pool.
 function bloodBurst(c:CanvasRenderingContext2D,age:number,x:number,y:number){
  const t=age-143;if(t<0)return;
- const pool=ease((t-8)/47),ripples=Math.sin(t*.22)*2;
+ // ZX Spectrum-inspired 4px grid, three reds, and hard stepped silhouettes.
+ const P=4,DEEP='#790d27',MID='#b20f31',BRIGHT='#ef2148';
+ const snap=(n:number)=>Math.round(n/P)*P;
+ const block=(xx:number,yy:number,ww:number,hh:number,color:string)=>
+  px(c,snap(xx),snap(yy),Math.max(P,snap(ww)),Math.max(P,snap(hh)),color);
+ const pool=ease((t-5)/53),impact=ease(t/8);
  c.save();c.imageSmoothingEnabled=false;
- // Layered horizontal pixel pools expand from the point of impact.
- for(let row=0;row<7;row++){
-  const radius=(28+row*13+235*pool)*(1-row*.095);
-  const yy=343+row*6+Math.round(ripples*(1-pool));
-  px(c,x-radius,yy,radius*2,6,row%3===0?'#92051e':RED);
+ // Broad liquid flood is made from rectangular 4px tiles with an uneven staircase edge.
+ const reach=24+302*pool;
+ for(let row=0;row<11;row++){
+  const width=reach*(1-row*.035)+((row*7)%5)*P;
+  const yy=337+row*P;
+  block(x-width,yy,width*2,P,row%4===0?DEEP:row%3===0?MID:BRIGHT);
  }
- // Large irregular surface lip; thin highlights read as liquid, not a prop.
- for(let i=0;i<19;i++){
-  const phase=i*2.399;
-  const distance=(24+(i%5)*23+180*pool);
-  const xx=x+Math.cos(phase)*distance;
-  const yy=345+Math.sin(phase)*5;
-  px(c,xx,yy,11+(i%4)*6,4+(i%3)*3,i%4===0?'#ff5371':RED);
+ // Ragged outer rim, never smooth circles or translucent gradients.
+ for(let i=0;i<35;i++){
+  const side=i%2===0?1:-1;
+  const xx=x+side*(reach*(.55+(i%9)*.052));
+  const yy=337-((i*7)%5)*P;
+  block(xx,yy,8+(i%4)*P,4+(i%3)*P,i%5===0?DEEP:BRIGHT);
  }
- // Expanding burst particles fly out from the bite and fall with gravity.
- if(t<70)for(let i=0;i<105;i++){
-  const vx=Math.sin(i*2.399)*(.9+(i%9)*.24);
-  const vy=-1.9-(i%11)*.31;
-  const dt=Math.max(0,t-(i%9)*1.5);
-  const xx=x+vx*dt*2.5,yy=y+vy*dt*2.8+.10*dt*dt;
-  if(yy<354&&dt>0)px(c,xx,yy,3+(i%4)*3,3+(i%3)*3,i%8===0?'#ff8290':i%5===0?'#92051e':RED);
+ // The initial blast: bold stair-step red pillars and chunky splatter fragments.
+ if(t<34){
+  const burst=Math.sin(Math.PI*clamp(t/34));
+  for(let i=0;i<19;i++){
+   const xx=x+(i-9)*P*4;
+   const hh=snap((16+(i*17)%96)*burst*impact);
+   if(hh>0)block(xx,330-hh,P*(1+i%3),hh,i%4===0?DEEP:i%3===0?MID:BRIGHT);
+  }
  }
- // Tall fountains in the first moments of impact.
- if(t<23)for(let i=0;i<11;i++){
-  const h=(22+(i%6)*17)*Math.sin(Math.PI*clamp(t/23));
-  px(c,x-65+i*13,318-h,5+(i%3)*3,h+8,i%3===0?'#ff5371':RED);
+ // Each droplet is a small, sharp pixel cluster with ballistic motion, no antialiasing.
+ if(t<85)for(let i=0;i<130;i++){
+  const delay=(i%13)*1.25,dt=t-delay;if(dt<=0)continue;
+  const vx=Math.sin(i*2.399)*(1.1+(i%11)*.28);
+  const vy=-2.4-(i%9)*.38;
+  const xx=x+vx*dt*2.4,yy=y+vy*dt*2.5+.12*dt*dt;
+  if(yy>=339)continue;
+  const unit=(i%5===0?3:i%3===0?2:1)*P;
+  block(xx,yy,unit,P*(i%7===0?3:1),i%7===0?MID:i%6===0?DEEP:BRIGHT);
+  if(i%8===0)block(xx+P,yy+P,P,P,BRIGHT);
+ }
+ // Sparse 4px highlights break up the pool into old-school dither patterns.
+ for(let i=0;i<45;i++){
+  const xx=x-reach+((i*73)%Math.max(P,Math.floor(reach*2/P)*P));
+  const yy=345+(i*11)%29;
+  block(xx,yy,P*(i%3===0?2:1),P,i%4===0?BRIGHT:DEEP);
  }
  c.restore();
 }
