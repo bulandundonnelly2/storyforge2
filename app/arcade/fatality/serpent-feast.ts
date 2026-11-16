@@ -16,8 +16,8 @@ function poly(c:CanvasRenderingContext2D,p:number[],color:string){
 function serpent(c:CanvasRenderingContext2D,age:number,cx:number,side:number){
  const coil=ease((age-29)/39),rise=ease((age-75)/28),strike=ease((age-109)/13)-ease((age-137)/19);
  const feeding=ease((age-149)/12)-ease((age-188)/21);
- const pulse=Math.sin(Math.floor(age/4)*.55);
- const headX=-105+strike*102,headY=-96-rise*43+strike*54+feeding*23;
+ // A deliberate transformation replaces the knight, not a snake appearing beside him.
+ const headX=26+strike*65+feeding*18,headY=-97-rise*50+strike*43+feeding*22;
  c.save();c.translate(Math.round(cx),337);c.scale(side,1);c.imageSmoothingEnabled=false;
  // Huge interlocking coils, not a thin spinal line. Body fills the entire lower stage.
  const coils=[
@@ -43,13 +43,16 @@ function serpent(c:CanvasRenderingContext2D,age:number,cx:number,side:number){
   c.restore();
  }
  // A muscular neck, with a tapered S curve that rears and strikes.
- const neckX=-68+strike*29,neckY=-61-rise*27;
+ // The serpent's skull stays connected to its thick neck throughout the lunge.
+ c.save();c.translate(105+strike*30,0);
+ const neckX=-68+strike*29;
  poly(c,[-82,-47,-100,-70,-105,-105-rise*27,-92,-134-rise*28,-69,-144-rise*28,-47,-123-rise*20,-47,-94,-52,-73,neckX,-44],WHITE);
  poly(c,[-88,-57,-91,-89,-88,-119-rise*23,-73,-135-rise*26,-59,-116-rise*19,-60,-92,-64,-68],BLACK);
  for(let i=0;i<14;i++){
   const y=-131+i*6-rise*23*(1-i/14),x=-81+Math.round(Math.sin(i*.6+age*.08)*5);
   px(c,x,y,8,2,WHITE);px(c,x+3,y+3,3,2,WHITE);
  }
+ c.restore();
  // The neck follows the head; dark silhouette retains width at full extension.
  c.save();c.translate(headX,headY);c.rotate(-.11*rise+.12*strike+Math.sin(age*.06)*.015);
  // Distinct crown horns, cheek plates, broad skull and long crocodilian muzzle.
@@ -73,15 +76,83 @@ function serpent(c:CanvasRenderingContext2D,age:number,cx:number,side:number){
  if(age>=148&&age<185){for(let i=0;i<7;i++){const x=headX+70+(i%3)*13,y=headY+12+(i-3)*10;px(c,x,y,4+(i%2)*3,4,i%3===0?WHITE:RED)}}
  c.restore();
 }
+// Thick overlapping front loop: drawn after the barbarian to make strangling unmistakable.
+function constrict(c:CanvasRenderingContext2D,x:number,y:number,age:number){
+ const tight=ease((age-107)/30),squeeze=Math.sin(age*.26)*3;
+ c.save();c.translate(Math.round(x),Math.round(y));
+ for(let k=0;k<3;k++){
+  const yy=-10+k*31+squeeze*(k%2?1:-1);
+  const width=82-k*12-12*tight;
+  poly(c,[-width,yy-14,-width+14,yy-24,width-16,yy-24,width,yy-11,width-3,yy+13,width-17,yy+18,-width+15,yy+18,-width-4,yy+9],WHITE);
+  poly(c,[-width+7,yy-6,-width+18,yy-14,width-18,yy-14,width-9,yy-6,width-16,yy+5,-width+15,yy+5],BLACK);
+  for(let i=0;i<18;i++){
+   const xx=-width+18+i*(width*2-36)/18;
+   px(c,xx,yy-10+(i%2)*2,5,2,WHITE);
+   if(i%3===0)px(c,xx+2,yy+8,3,3,RED);
+  }
+ }
+ c.restore();
+}
 export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number,actor:SerpentActor){
- const side=w.e.x>=w.p.x?1:-1,cx=Math.max(270,Math.min(530,(w.e.x+w.p.x)/2));
- const enter=ease((age-18)/48),morph=ease((age-24)/45);
- const victim=w.p.x+(cx+side*119-w.p.x)*enter,knight=w.e.x+(cx-side*77-w.e.x)*enter;
+ // The skeletal knight transforms on screen, coils around the barbarian, then swallows him.
+ const side=w.p.x>=w.e.x?1:-1;
+ const cx=Math.max(285,Math.min(515,(w.e.x+w.p.x)/2));
+ const knightX=w.e.x+(cx-side*86-w.e.x)*ease((age-6)/32);
+ const victimX=w.p.x+(cx+side*105-w.p.x)*ease((age-6)/37);
+ const morph=ease((age-32)/38);
  ctx.save();
- if(age<73)actor('knight',age<29?0:8,knight,346,190-90*morph,0,1-morph);
- if(age<151)actor('barbarian',age<119?13:12,victim,346,188,0,1);
- else if(age<208){const fall=ease((age-151)/31);actor('barbarian',15,victim+side*fall*35,346,188,side*fall*.9,1-ease((age-188)/20))}
- if(age>=28){ctx.globalAlpha=ease((age-28)/25);serpent(ctx,age,cx-side*25,side);ctx.globalAlpha=1}
- if(age>=215){const a=ease((age-215)/17);px(ctx,218,46,364,92,'rgba(0,0,0,'+(.9*a)+')');ctx.globalAlpha=a;ctx.textAlign='center';ctx.fillStyle=WHITE;ctx.font='bold 48px monospace';ctx.fillText('FATALITY',400,92);ctx.fillStyle=RED;ctx.font='bold 18px monospace';ctx.fillText('SERPENT FEAST',400,124);ctx.globalAlpha=1}
+ // 0-32: Both combatants are visible. The skeletal knight raises his weapon.
+ if(age<70){
+  const tremor=age>30?Math.sin(age*1.6)*4*morph:0;
+  actor('knight',age<22?0:age<43?10:12,knightX+tremor,346,190+30*morph,0,1-morph);
+  // Skeleton-to-serpent change: growing white scale blocks erupt from the knight.
+  if(age>=34){
+   const growth=ease((age-34)/33);
+   for(let i=0;i<19;i++){
+    const a=i*2.399+age*.07,r=(12+i*4)*growth;
+    px(ctx,knightX+Math.cos(a)*r,255+Math.sin(a)*r,4+(i%3)*3,4+(i%2)*4,i%7===0?RED:WHITE);
+   }
+  }
+ }
+ // 42-82: A giant serpent grows out of the knight's position, not from off-screen.
+ if(age>=43){
+  ctx.save();ctx.globalAlpha=ease((age-43)/29);
+  serpent(ctx,age,cx-side*43,side);
+  ctx.restore();
+ }
+ // The barbarian remains visible throughout the grab and tightening coils.
+ if(age<191){
+  const panic=age>=106&&age<153?Math.sin(age*.42)*4:0;
+  const lift=age>=124?ease((age-124)/29)*32:0;
+  const swallow=ease((age-160)/30);
+  // During swallowing, the victim moves into the open mouth and gets smaller.
+  const mouthX=cx+side*102;
+  const x=victimX+(mouthX-victimX)*swallow;
+  const size=188*(1-.90*swallow);
+  const ground=346-lift-90*swallow;
+  if(age<160||swallow<.99)actor('barbarian',age<107?0:age<148?12:15,x+panic,ground,size,side*swallow*.75,1);
+ }
+ // 106-159: Body crosses IN FRONT of the victim. Coils squeeze progressively tighter.
+ if(age>=106&&age<165){
+  ctx.save();ctx.globalAlpha=ease((age-106)/12)*(1-ease((age-153)/12));
+  constrict(ctx,victimX,242,age);
+  ctx.restore();
+ }
+ // 160-194: the serpent's jaws engulf the last visible part of the victim.
+ if(age>=158&&age<195){
+  const swallow=ease((age-158)/36);
+  const mouthX=cx+side*102,mouthY=207;
+  px(ctx,mouthX-side*23,mouthY-13,46,10,BLACK);
+  for(let i=0;i<6;i++)px(ctx,mouthX-side*(24-i*7),mouthY+Math.sin(age*.5+i)*4,5,6,i%2?WHITE:RED);
+  if(swallow>.7)px(ctx,mouthX-side*13,mouthY+4,23,5,RED);
+ }
+ // 196-215: full-bellied serpent recoils and settles; only then reveal the title.
+ if(age>=214){
+  const a=ease((age-214)/17);
+  px(ctx,218,46,364,92,'rgba(0,0,0,'+(.9*a)+')');
+  ctx.globalAlpha=a;ctx.textAlign='center';ctx.fillStyle=WHITE;ctx.font='bold 48px monospace';
+  ctx.fillText('FATALITY',400,92);ctx.fillStyle=RED;ctx.font='bold 18px monospace';
+  ctx.fillText('SERPENT FEAST',400,124);ctx.globalAlpha=1;
+ }
  ctx.restore();
 }
