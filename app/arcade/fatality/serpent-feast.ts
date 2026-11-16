@@ -127,47 +127,43 @@ function drawSprite(c:CanvasRenderingContext2D,age:number,cx:number,side:number)
 }
 
 
-// The victim stays whole and is progressively swallowed head-first.
-// A mouth aperture masks the body so the player sees it disappearing inside.
-function swallowVictim(ctx:CanvasRenderingContext2D,actor:SerpentActor,age:number,x:number,mouthX:number,side:number){
- const progress=ease((age-141)/66);
- const grab=ease((age-104)/36);
- const targetX=mouthX-side*14;
- const vx=x+(targetX-x)*progress;
- const feet=346-45*grab-102*progress;
- const scale=188*(1-.78*progress);
- ctx.save();
- // Clip to the outside of the serpent's mouth; never draw a detached head/skull.
- const lip=mouthX-side*12;
- ctx.beginPath();
- if(side>0)ctx.rect(0,0,Math.max(0,lip),400);
- else ctx.rect(Math.min(800,lip),0,800-Math.min(800,lip),400);
- ctx.clip();
- actor('barbarian',age<117?0:12,vx,feet,scale,side*(-.18*grab-.65*progress),1-ease((age-198)/9));
- ctx.restore();
- // Blood appears at the bite, not as an unrelated object in the fighter's hand.
- if(age>=142&&age<194){
-  for(let i=0;i<15;i++){
-   const p=(age-142)*(.8+(i%4)*.27);
-   const dx=Math.sin(i*2.4)*p*.8,dy=Math.cos(i*1.7)*p*.35+p*.65;
-   px(ctx,mouthX+dx,201+dy,3+i%3*2,3+i%2*2,i%6===0?WHITE:RED);
-  }
+// Impact: one clear bite, then an enormous pixel-red splash and spreading floor pool.
+function bloodBurst(c:CanvasRenderingContext2D,age:number,x:number,y:number){
+ const t=age-143;if(t<0)return;
+ const pool=ease((t-8)/47),ripples=Math.sin(t*.22)*2;
+ c.save();c.imageSmoothingEnabled=false;
+ // Layered horizontal pixel pools expand from the point of impact.
+ for(let row=0;row<7;row++){
+  const radius=(28+row*13+235*pool)*(1-row*.095);
+  const yy=343+row*6+Math.round(ripples*(1-pool));
+  px(c,x-radius,yy,radius*2,6,row%3===0?'#92051e':RED);
  }
-}
-function stomachBulge(ctx:CanvasRenderingContext2D,age:number,cx:number,side:number){
- const gulp=ease((age-164)/38),settle=ease((age-213)/20);
- if(gulp<=0)return;
- const width=(15+32*gulp-12*settle),height=(9+23*gulp-8*settle);
- const x=cx-side*(35-65*gulp),y=300+Math.sin(age*.13)*2;
- ctx.save();ctx.globalAlpha=.9;
- poly(ctx,[x-width,y,x-width*.7,y-height,x+width*.7,y-height,x+width,y,x+width*.65,y+height,x-width*.7,y+height],WHITE);
- poly(ctx,[x-width*.72,y,x-width*.45,y-height*.7,x+width*.5,y-height*.7,x+width*.78,y,x+width*.45,y+height*.65,x-width*.5,y+height*.65],BLACK);
- for(let i=0;i<15;i++)px(ctx,x-width+((i*13)%(width*2)),y-height+((i*7)%(height*2)),3,2,WHITE);
- ctx.restore();
+ // Large irregular surface lip; thin highlights read as liquid, not a prop.
+ for(let i=0;i<19;i++){
+  const phase=i*2.399;
+  const distance=(24+(i%5)*23+180*pool);
+  const xx=x+Math.cos(phase)*distance;
+  const yy=345+Math.sin(phase)*5;
+  px(c,xx,yy,11+(i%4)*6,4+(i%3)*3,i%4===0?'#ff5371':RED);
+ }
+ // Expanding burst particles fly out from the bite and fall with gravity.
+ if(t<70)for(let i=0;i<105;i++){
+  const vx=Math.sin(i*2.399)*(.9+(i%9)*.24);
+  const vy=-1.9-(i%11)*.31;
+  const dt=Math.max(0,t-(i%9)*1.5);
+  const xx=x+vx*dt*2.5,yy=y+vy*dt*2.8+.10*dt*dt;
+  if(yy<354&&dt>0)px(c,xx,yy,3+(i%4)*3,3+(i%3)*3,i%8===0?'#ff8290':i%5===0?'#92051e':RED);
+ }
+ // Tall fountains in the first moments of impact.
+ if(t<23)for(let i=0;i<11;i++){
+  const h=(22+(i%6)*17)*Math.sin(Math.PI*clamp(t/23));
+  px(c,x-65+i*13,318-h,5+(i%3)*3,h+8,i%3===0?'#ff5371':RED);
+ }
+ c.restore();
 }
 
 export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number,actor:SerpentActor){
- // The skeletal knight transforms on screen, coils around the barbarian, then swallows him.
+ // The skeletal knight transforms, the serpent bites the barbarian, and a red liquid explosion fills the arena.
  const side=w.p.x>=w.e.x?1:-1;
  const cx=Math.max(285,Math.min(515,(w.e.x+w.p.x)/2));
  const knightX=w.e.x+(cx-side*86-w.e.x)*ease((age-6)/32);
@@ -193,17 +189,14 @@ export function drawSerpentFeast(ctx:CanvasRenderingContext2D,w:World,age:number
   if(!drawSprite(ctx,age,cx-side*43,side))serpent(ctx,age,cx-side*43,side);
   ctx.restore();
  }
- // 105-207: the serpent bites the barbarian and swallows him whole.
- // Frame 15 previously showed a skull-like prop; never use that frame.
- if(age<141){
-  const panic=age>=106?Math.sin(age*.42)*4:0;
-  const lift=age>=124?ease((age-124)/29)*45:0;
+ // Bite lands at frame 143: the fighter disappears in a single explosive impact.
+ // Do not show the previous shrinking/swallowing or detached-skull pose.
+ if(age<143){
+  const panic=age>=107?Math.sin(age*.45)*3:0;
+  const lift=age>=124?ease((age-124)/19)*20:0;
   actor('barbarian',age<107?0:12,victimX+panic,346-lift,188,0,1);
- }else if(age<209){
-  swallowVictim(ctx,actor,age,victimX,cx+side*102,side);
  }
- // A visible moving bulge tracks the swallowed fighter through the coils.
- if(age>=165)stomachBulge(ctx,age,cx-side*43,side);
+ if(age>=143)bloodBurst(ctx,age,victimX,260);
  // 196-215: full-bellied serpent recoils and settles; only then reveal the title.
  if(age>=214){
   const a=ease((age-214)/17);
