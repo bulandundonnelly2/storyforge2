@@ -6,7 +6,7 @@ export type Fighter={
  x:number;vx:number;hp:number;stamina:number;face:number;
  attack:number;attackStart:number;heavy:boolean;action:Strike|null;actionFrame:number;didConnect:boolean;
  stun:number;guard:boolean;guardLow:boolean;guardFrames:number;guardTimer:number;
- crouch:boolean;walk:number;walkClock:number;airY:number;airV:number;projectileCooldown:number;specialFrames:number;comboHits:number;comboWindow:number;aiMode:'approach'|'retreat'|'hold'|'bait'|'rush';aiTimer:number;
+ crouch:boolean;walk:number;walkClock:number;airY:number;airV:number;projectileCooldown:number;specialFrames:number;specialUsed:boolean;comboHits:number;comboWindow:number;aiMode:'approach'|'retreat'|'hold'|'bait'|'rush';aiTimer:number;
 };
 export type World={
  p:Fighter;e:Fighter;phase:'fight'|'finish'|'fatality'|'enemyFatality'|'win'|'lose';
@@ -27,7 +27,7 @@ const fighter=(x:number,face:number):Fighter=>({
  x,vx:0,hp:180,stamina:100,face,
  attack:0,attackStart:0,heavy:false,action:null,actionFrame:0,didConnect:false,
  stun:0,guard:false,guardLow:false,guardFrames:0,guardTimer:0,
- crouch:false,walk:-1,walkClock:0,airY:0,airV:0,projectileCooldown:0,specialFrames:0,comboHits:0,comboWindow:0,aiMode:'hold',aiTimer:50
+ crouch:false,walk:-1,walkClock:0,airY:0,airV:0,projectileCooldown:0,specialFrames:0,specialUsed:false,comboHits:0,comboWindow:0,aiMode:'hold',aiTimer:50
 });
 export function createDuel(difficulty:'easy'|'normal'|'hard'='normal'):World{
  return {p:fighter(233,1),e:fighter(567,-1),phase:'fight',time:0,frame:0,fx:0,step:0,combo:0,enemyCooldown:76,
@@ -168,8 +168,8 @@ export function advanceDuel(w:World,controls:Controls,random:()=>number=Math.ran
   if(f.airY>0||f.airV>0){f.airY=Math.max(0,f.airY+f.airV);f.airV-=.73;if(f.airY===0)f.airV=0}
  }
  if(controls.jump&&p.airY===0&&p.stun===0){p.airV=12.6;p.airY=1;p.crouch=false}
- if(controls.special&&p.projectileCooldown===0&&p.stamina>=38&&p.stun===0){
-  p.stamina-=38;p.projectileCooldown=145;p.specialFrames=44;p.action=null;p.attack=0;
+ if(controls.special&&!p.specialUsed&&p.projectileCooldown===0&&p.stamina>=38&&p.stun===0){
+  p.specialUsed=true;p.stamina-=38;p.projectileCooldown=145;p.specialFrames=44;p.action=null;p.attack=0;
   for(let i=0;i<12;i++){
    const angle=(i/12)*Math.PI*2;
    w.projectiles.push({x:p.x,y:218-p.airY,vx:Math.cos(angle)*5.5,vy:Math.sin(angle)*5.5,who:'p',kind:'fireball',life:78,damage:10});
