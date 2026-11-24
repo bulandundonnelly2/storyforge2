@@ -14,7 +14,7 @@ export default function BoneBoss(){
  useEffect(()=>{
   const cv=canvas.current,ctx=cv?.getContext('2d');if(!cv||!ctx)return;
   ctx.imageSmoothingEnabled=false;
-  const W=640,H=320;let frame=0,raf=0,last=0,debt=0,px=72,py=160,hp=3,inv=0,score=0,bossHP=160,ended=false,cool=0,bossY=160,bossX=760;
+  const W=640,H=320;let frame=0,raf=0,last=0,debt=0,px=72,py=160,hp=3,inv=0,score=0,bossHP=160,ended=false,cool=0,bossY=160,bossX=phase==='ready'?505:760;
   let bullets:Shot[]=[],hazards:Shot[]=[],enemies:Enemy[]=[];const stars=Array.from({length:100},(_,i)=>({x:(i*137.31)%W,y:(i*79.17)%H,s:1+i%3,v:.4+i%4*.45}));
   const rect=(x:number,y:number,w:number,h:number,c:string)=>{ctx.fillStyle=c;ctx.fillRect(Math.floor(x),Math.floor(y),w,h)};
   const poly=(a:number[],c:string)=>{ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(a[0],a[1]);for(let i=2;i<a.length;i+=2)ctx.lineTo(a[i],a[i+1]);ctx.closePath();ctx.fill()};
@@ -34,11 +34,34 @@ export default function BoneBoss(){
    if(frame<850&&frame%68===1)enemies.push({x:W+25,y:48+(frame*37)%238,hp:3,seed:frame});
    for(const e of enemies){e.x-=2.1;e.y+=Math.sin((frame+e.seed)/25)*.7;if((frame+e.seed)%100===0)hazards.push({x:e.x,y:e.y,vx:-3.4,vy:(py-e.y)/100});if(Math.abs(e.x-px)<22&&Math.abs(e.y-py)<15){hit();e.hp=0}}
    if(frame>=870){bossX=Math.max(505,bossX-1.6);bossY=160+Math.sin(frame/75)*47;if(bossX<=525&&frame%42===0){const a=Math.atan2(py-bossY,px-bossX);for(const off of [-.23,0,.23])hazards.push({x:bossX-58,y:bossY-10,vx:Math.cos(a+off)*3.7,vy:Math.sin(a+off)*3.7});tone(110,.11)}if(bossHP<80&&frame%23===0)hazards.push({x:bossX-55,y:bossY+40,vx:-4.5,vy:Math.sin(frame)*2.5});if(Math.abs(px-bossX)<75&&Math.abs(py-bossY)<80)hit()}
-   for(const b of bullets){b.x+=b.vx;for(const e of enemies){if(e.hp>0&&Math.abs(b.x-e.x)<15&&Math.abs(b.y-e.y)<12){e.hp--;b.x=W+100;if(e.hp===0){score+=100;tone(140,.1)}break}}if(frame>=870&&b.x<W+50&&Math.abs(b.x-(bossX-35))<24&&Math.abs(b.y-(bossY+12))<37){bossHP--;b.x=W+100;score+=10;if(bossHP<=0){win();break}}}
+   for(const b of bullets){b.x+=b.vx;for(const e of enemies){if(e.hp>0&&Math.abs(b.x-e.x)<15&&Math.abs(b.y-e.y)<12){e.hp--;b.x=W+100;if(e.hp===0){score+=100;tone(140,.1)}break}}if(frame>=870&&b.x<W+50&&Math.abs(b.x-(bossX-52))<24&&Math.abs(b.y-(bossY+16))<37){bossHP--;b.x=W+100;score+=10;if(bossHP<=0){win();break}}}
    for(const b of hazards){b.x+=b.vx;b.y+=b.vy;if(Math.abs(b.x-px)<12&&Math.abs(b.y-py)<9){hit();b.x=-100}}
    bullets=bullets.filter(b=>b.x<W+20);hazards=hazards.filter(b=>b.x>-30&&b.x<W+80&&b.y>20&&b.y<H+20);enemies=enemies.filter(e=>e.hp>0&&e.x>-30);
   };
+
+  // Extract independent sprites and scenery from the approved concept artwork.
+  // Normalized coordinates refer to the original 1672 x 941 image.
+  const art=new Image();art.crossOrigin='anonymous';art.src='https://cdn.shopify.com/s/files/1/1119/4587/5846/files/eldernight-ossuary-approved.png?v=1795555498';
+  let ship:HTMLCanvasElement|null=null,skull:HTMLCanvasElement|null=null,back:HTMLCanvasElement|null=null,roof:HTMLCanvasElement|null=null,floor:HTMLCanvasElement|null=null;
+  const cut=(x:number,y:number,w:number,h:number,outline?:number[])=>{
+   const out=document.createElement('canvas');out.width=w;out.height=h;const a=out.getContext('2d')!;
+   if(outline){a.beginPath();a.moveTo(outline[0]-x,outline[1]-y);for(let i=2;i<outline.length;i+=2)a.lineTo(outline[i]-x,outline[i+1]-y);a.closePath();a.clip()}
+   a.drawImage(art,x,y,w,h,0,0,w,h);return out;
+  };
+  art.onload=()=>{
+   // Tight silhouettes prevent the concept's HUD, bullets and environment from travelling with the sprites.
+   ship=cut(83,395,225,110,[87,398,151,398,190,425,234,428,302,454,258,471,209,475,151,500,95,500,121,474,87,467,87,435,121,430]);
+   skull=cut(1040,149,632,607,[1040,320,1065,260,1113,217,1190,182,1270,160,1348,152,1430,155,1500,186,1672,193,1672,750,1500,750,1430,728,1360,742,1260,728,1190,696,1120,640,1095,590,1070,530,1045,480]);
+   // The clean central strip is mirrored at tile seams, avoiding baked-in ships, shots and boss.
+   back=cut(320,155,650,235);
+   roof=cut(310,76,335,152);
+   floor=cut(0,765,1030,176);
+  };
+  const tiled=(img:HTMLCanvasElement,y:number,h:number,speed:number,tw:number)=>{
+   const o=(frame*speed)%(tw*2);for(let j=-2;j<Math.ceil(W/tw)+3;j++){ctx.save();ctx.translate(Math.round(j*tw-o),y);if(j%2!==0){ctx.translate(tw,0);ctx.scale(-1,1)}ctx.drawImage(img,0,0,tw,h);ctx.restore()}
+  };
   const drawSkull=()=>{
+   if(skull){ctx.drawImage(skull,Math.round(bossX-75),Math.round(bossY-102),240,230);const pulse=frame%18;ctx.globalAlpha=.45+pulse/40;rect(bossX-52,bossY+16,8,8,'#58eaff');ctx.globalAlpha=1;return}
    const x=bossX,y=bossY;ctx.save();ctx.translate(Math.round(x),Math.round(y));const r=(a:number,b:number,w:number,h:number,c:string)=>rect(a,b,w,h,c);
    // Layered, stepped armour plates and machine ribs, drawn at native pixel resolution.
    for(let i=0;i<8;i++){const z=i*9;r(32+z,-63+z%24,42,9,'#2d175c');r(40+z,-59+z%24,34,3,'#884fc6');r(32+z,40-z%20,39,8,'#154b69');r(35+z,42-z%20,30,2,'#38d8ee')}
@@ -59,19 +82,20 @@ export default function BoneBoss(){
   const paint=()=>{
    rect(0,0,W,H,'#050510');
    for(const s of stars){const x=((s.x-frame*s.v)%W+W)%W;rect(x,s.y,s.s,s.s,s.s===3?'#753eb2':s.s===2?'#1d789d':'#37395d')}
+   if(back){tiled(back,23,255,.22,510)}
    // Scrolling industrial superstructure, with repeating hand-pixelled trusses.
    const offset=(frame*.8)%128;
-   for(let i=-1;i<7;i++){const x=i*128-offset;rect(x,24,115,18,'#201035');rect(x,26,112,3,'#7036a1');rect(x,278,115,42,'#19102b');rect(x,283,110,3,'#502b85');for(let j=0;j<6;j++){rect(x+j*18,33,9,5,'#13445e');rect(x+j*18,290,12,19,'#34205f');rect(x+j*18+3,292,3,12,'#15718a')}poly([x,39,x+8,39,x+31,79,x+24,79],'#292044');poly([x+82,278,x+90,278,x+115,241,x+107,241],'#30204b');for(let j=0;j<35;j++){rect(x+(j*19)%110,282+(j*13)%36,2,2,j%3?'#472879':'#1b7494')}}
+   if(roof&&floor){tiled(roof,23,53,.75,145);tiled(floor,276,44,1.15,258)}else for(let i=-1;i<7;i++){const x=i*128-offset;rect(x,24,115,18,'#201035');rect(x,26,112,3,'#7036a1');rect(x,278,115,42,'#19102b');rect(x,283,110,3,'#502b85');for(let j=0;j<6;j++){rect(x+j*18,33,9,5,'#13445e');rect(x+j*18,290,12,19,'#34205f');rect(x+j*18+3,292,3,12,'#15718a')}poly([x,39,x+8,39,x+31,79,x+24,79],'#292044');poly([x+82,278,x+90,278,x+115,241,x+107,241],'#30204b');for(let j=0;j<35;j++){rect(x+(j*19)%110,282+(j*13)%36,2,2,j%3?'#472879':'#1b7494')}}
    for(const e of enemies){poly([e.x-17,e.y,e.x-4,e.y-10,e.x+17,e.y-7,e.x+9,e.y,e.x+17,e.y+7,e.x-4,e.y+10],'#8044bf');rect(e.x-10,e.y-3,18,6,'#64e8ff');rect(e.x+5,e.y-2,6,4,'#fff')}
    if(frame>=870||phase==='ready')drawSkull();
-   if(inv%8<4||inv===0){poly([px-17,py-7,px+2,py-7,px+19,py,px+2,py+7,px-17,py+7,px-10,py],'#d7e4eb');poly([px-7,py-4,px+7,py-4,px+15,py,px-5,py+2],'#147fa7');rect(px-24-(frame%4),py-2,12+frame%4,4,'#13d6fc');rect(px-20,py-1,8,2,'#fff')}
+   if(inv%8<4||inv===0){if(ship){ctx.drawImage(ship,Math.round(px-24),Math.round(py-12),49,24);rect(px-27-(frame%5),py-1,10+frame%5,3,'#38eaff');rect(px-24,py,8,1,'#fff')}else{poly([px-17,py-7,px+2,py-7,px+19,py,px+2,py+7,px-17,py+7,px-10,py],'#d7e4eb');poly([px-7,py-4,px+7,py-4,px+15,py,px-5,py+2],'#147fa7');rect(px-24-(frame%4),py-2,12+frame%4,4,'#13d6fc');rect(px-20,py-1,8,2,'#fff')}}
    for(const b of bullets){rect(b.x,b.y-1,10,3,'#78edff');rect(b.x+7,b.y,5,1,'#fff')}for(const b of hazards){rect(b.x-3,b.y-3,6,6,'#ef235c');rect(b.x-1,b.y-1,2,2,'#fff')}
    rect(0,0,W,23,'#090713');label('PILOT 07  '+('♥ '.repeat(Math.max(0,hp))),10,16,'#74e8fc');label('SCORE '+String(score).padStart(5,'0'),238,16);if(frame>=870){label('OSSUARY',455,15,'#f95b88');rect(523,7,106,9,'#30152d');rect(523,7,Math.max(0,bossHP)/160*106,9,'#df285b')}else label('APPROACH '+Math.min(100,Math.floor(frame/8.7))+'%',475,16,'#ac80e6');
    if(frame>780&&frame<890&&phase==='fight')label('WARNING: OSSUARY CORE',202,155,'#ff4d80',17);
   };
   const loop=(t:number)=>{if(!last)last=t;debt=Math.min(50,debt+t-last);last=t;while(debt>=1000/60){tick();debt-=1000/60}paint();raf=requestAnimationFrame(loop)};raf=requestAnimationFrame(loop);
-  return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur)};
- },[phase==='fight',run]);
+  return()=>{art.onload=null;cancelAnimationFrame(raf);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur)};
+ },[phase,run]);
  // Keep result screen above the canvas; entering or leaving the battle clears controls.
  const move=(e:React.PointerEvent<HTMLCanvasElement>)=>{const r=e.currentTarget.getBoundingClientRect();touch.current={x:(e.clientX-r.left)*640/r.width,y:(e.clientY-r.top)*320/r.height}};
  return <main style={{minHeight:'100vh',background:'#050510',color:'#e3e9f3',fontFamily:'monospace',textAlign:'center',padding:'20px 12px'}}><a href="/#bone" style={{color:'#af8af0'}}>← SPIT OUT THE BONE</a><h1 style={{color:'#bd76ff',fontSize:'clamp(22px,5vw,44px)',letterSpacing:3}}>SPIT OUT THE BONE</h1><p style={{color:'#58e9ff',letterSpacing:2}}>SECRET LEVEL · OSSUARY CORE</p><div style={{maxWidth:1200,margin:'auto',position:'relative'}}><canvas ref={canvas} width={640} height={320} onPointerDown={e=>{if(phase==='fight'){e.currentTarget.setPointerCapture(e.pointerId);move(e)}}} onPointerMove={e=>{if(touch.current)move(e)}} onPointerUp={()=>{touch.current=null}} onPointerCancel={()=>{touch.current=null}} style={{display:'block',width:'100%',height:'auto',imageRendering:'pixelated',border:'2px solid #7546ba',touchAction:'none',boxSizing:'border-box'}}/>{phase!=='fight'&&<section style={{position:'absolute',inset:'0',display:'flex',alignItems:'center',justifyContent:'center',background:'#05051088'}}><div style={{background:'#080713',border:'2px solid #9c59ec',padding:'clamp(12px,3vw,32px)',maxWidth:'78%'}}><h2 style={{color:'#fff',fontSize:'clamp(16px,3.5vw,32px)'}}>{phase==='locked'?'SECRET LEVEL LOCKED':phase==='win'?'HUMANITY SURVIVES':phase==='lose'?'TRANSMISSION LOST':'DESTROY OSSUARY'}</h2><p style={{color:'#61eaff',fontSize:'clamp(10px,1.6vw,16px)'}}>{phase==='win'?'The machine consensus collapses. Free will returns.':phase==='locked'?'Find the true path in the story.':phase==='lose'?'The interceptor was destroyed. Try again.':'Three lives. One interceptor. No surrender.'}</p>{phase==='locked'||phase==='win'?<a href="/#bone" style={{color:'#fff'}}>RETURN TO THE STORY →</a>:<button onClick={start} style={{background:'#6e37ad',border:'2px solid #c58aff',color:'#fff',font:'bold 16px monospace',padding:'12px 22px',cursor:'pointer'}}>{phase==='lose'?'RETRY MISSION':'START MISSION'}</button>}</div></section>}</div><p>MOVE: ARROWS / WASD · FIRE: SPACE · TOUCH: DRAG TO MOVE AND FIRE</p><p style={{color:'#a994c5'}}>Survive the approach, then aim at the skull’s glowing neural core.</p><button onClick={()=>setMuted(v=>!v)} style={{background:'#211638',color:'#fff',border:'1px solid #895ac7',padding:'9px 15px',cursor:'pointer'}}>{muted?'SOUND OFF':'SOUND ON'}</button></main>
