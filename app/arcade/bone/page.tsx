@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 
 type Phase='ready'|'fight'|'win'|'lose'|'locked';
-type Shot={x:number;y:number;vx:number;vy:number;damage?:number;kind?:Power};
+type Shot={x:number;y:number;vx:number;vy:number;damage?:number;kind?:Power;rocket?:boolean;age?:number};
 type Power='spread'|'laser'|'rapid'|'shield'|'life';
 type Pickup={x:number;y:number;kind:Power};
 type Enemy={x:number;y:number;hp:number;seed:number};
@@ -16,7 +16,7 @@ export default function BoneBoss(){
  useEffect(()=>{
   const cv=canvas.current,ctx=cv?.getContext('2d');if(!cv||!ctx)return;
   ctx.imageSmoothingEnabled=false;
-  const W=640,H=320;let frame=0,raf=0,last=0,debt=0,px=72,py=160,hp=3,inv=0,score=0,bossHP=160,bossFlash=0,finale=0,attackClock=0,beamY=160,ended=false,cool=0,death=0,shield=0,weapon:Power='rapid',weaponTime=0,bossY=160,bossX=phase==='ready'?505:760;
+  const W=640,H=320;let frame=0,raf=0,last=0,debt=0,px=72,py=160,hp=3,inv=0,score=0,bossHP=480,bossStage=1,chargeY=160,bossFlash=0,finale=0,attackClock=0,beamY=160,ended=false,cool=0,death=0,shield=0,weapon:Power='rapid',weaponTime=0,bossY=160,bossX=phase==='ready'?505:760;
   let bullets:Shot[]=[],hazards:Shot[]=[],enemies:Enemy[]=[];let pickups:Pickup[]=[],kills=0;const kinds:Power[]=['spread','laser','rapid','shield','life'];const colors:Record<Power,string>={spread:'#ff9c45',laser:'#e879ff',rapid:'#64e8ff',shield:'#70ffb5',life:'#ff557c'};const stars=Array.from({length:100},(_,i)=>({x:(i*137.31)%W,y:(i*79.17)%H,s:1+i%3,v:.4+i%4*.45}));
   const rect=(x:number,y:number,w:number,h:number,c:string)=>{ctx.fillStyle=c;ctx.fillRect(Math.floor(x),Math.floor(y),w,h)};
   const poly=(a:number[],c:string)=>{ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(a[0],a[1]);for(let i=2;i<a.length;i+=2)ctx.lineTo(a[i],a[i+1]);ctx.closePath();ctx.fill()};
@@ -35,17 +35,19 @@ export default function BoneBoss(){
    if((k.has(' ')||touch.current)&&cool===0){const mode=weaponTime>0?weapon:null;for(const vy of mode==='spread'?[-2.4,0,2.4]:[0])bullets.push({x:px+18,y:py,vx:mode==='laser'?14:8.5,vy,damage:mode==='laser'?3:1,kind:mode??undefined});cool=mode==='rapid'?3:mode==='laser'?10:7;tone(mode==='laser'?650:310,.035)}
    if(frame<850&&frame%68===1)enemies.push({x:W+25,y:48+(frame*37)%238,hp:3,seed:frame});
    for(const e of enemies){e.x-=2.1;e.y+=Math.sin((frame+e.seed)/25)*.7;if((frame+e.seed)%100===0)hazards.push({x:e.x,y:e.y,vx:-3.4,vy:(py-e.y)/100});if(Math.abs(e.x-px)<22&&Math.abs(e.y-py)<15){hit();e.hp=0}}
-   if(frame>=870){bossX=Math.max(505,bossX-1.6);bossY=160+Math.sin(frame/(bossHP<45?48:75))*47;
-    if(bossX<=525){attackClock++;const rage=bossHP<=45,mid=bossHP<=100;const cycle=attackClock%360;
-     if(cycle<100&&attackClock%(rage?18:30)===0){const a=Math.atan2(py-bossY,px-bossX);for(const off of (mid?[-.46,-.23,0,.23,.46]:[-.23,0,.23]))hazards.push({x:bossX-58,y:bossY-10,vx:Math.cos(a+off)*4,vy:Math.sin(a+off)*4});tone(110,.09)}
-     if(cycle>=100&&cycle<190&&attackClock%(rage?13:22)===0){for(let i=0;i<7;i++){const a=Math.PI+(i-3)*.23+Math.sin(attackClock/22)*.25;hazards.push({x:bossX-45,y:bossY,vx:Math.cos(a)*3.2,vy:Math.sin(a)*3.2})}tone(150,.06)}
-     if(cycle===190){beamY=py;tone(260,.35)}
-     if(cycle>=230&&cycle<258&&Math.abs(py-beamY)<12&&px<bossX-50)hit();
-     if(cycle===230)tone(55,.45);
-     if(cycle>=270&&cycle<345&&attackClock%(rage?16:28)===0){const gap=55+(Math.floor(attackClock/28)*73)%195;for(let y=40;y<290;y+=25)if(Math.abs(y-gap)>39)hazards.push({x:bossX-55,y,vx:-3.6,vy:0});tone(95,.1)}
-    }if(Math.abs(px-bossX)<75&&Math.abs(py-bossY)<80)hit()}
-   for(const b of bullets){b.x+=b.vx;b.y+=b.vy;for(const e of enemies){if(e.hp>0&&Math.abs(b.x-e.x)<15&&Math.abs(b.y-e.y)<12){e.hp=Math.max(0,e.hp-(b.damage??1));b.x=W+100;if(e.hp===0){score+=100;tone(140,.1);if(++kills%2===0)pickups.push({x:e.x,y:e.y,kind:kinds[(kills/2-1)%5]})}break}}if(!death&&frame>=870&&b.x<W+50&&b.x+(b.kind==='laser'?24:10)>=bossX-75&&b.x-b.vx<=bossX+155&&Math.abs(b.y-bossY)<=102){bossHP=Math.max(0,bossHP-(b.damage??1));bossFlash=7;b.x=W+100;score+=10;tone(180,.025);if(bossHP<=0){win();return}}}
-   for(const b of hazards){b.x+=b.vx;b.y+=b.vy;if(Math.abs(b.x-px)<12&&Math.abs(b.y-py)<9){hit();b.x=-100}}
+   if(frame>=870){
+    if(!attackClock&&bossX>505){bossX=Math.max(505,bossX-1.6);bossY=160+Math.sin(frame/75)*47}
+    if(bossX<=505||attackClock){attackClock++;const cycle=attackClock%240;
+     if(bossStage!==3){bossX=Math.min(505,bossX+6);bossY=160+Math.sin(frame/(bossStage===4?36:65))*55}
+     if(bossStage===1&&cycle%36===10){for(const off of [-.28,.28]){const a=Math.atan2(py-bossY,px-bossX)+off;hazards.push({x:bossX-65,y:bossY+off*85,vx:Math.cos(a)*3.1,vy:Math.sin(a)*3.1,rocket:true,age:0})}tone(90,.12)}
+     if(bossStage===2||bossStage===4){const c=attackClock%120;if(c===1){beamY=py;tone(260,.3)}if(c>=35&&c<65){const ys=bossStage===4?[beamY-25,beamY+25]:[beamY];for(const y of ys)if(Math.abs(py-y)<(bossStage===4?10:15)&&px<bossX-50)hit()}if(c===35)tone(55,.4);if(bossStage===4&&c%15===0){for(const off of [-.5,-.25,0,.25,.5]){const a=Math.PI+off+Math.sin(frame/20)*.22;hazards.push({x:bossX-50,y:bossY-25,vx:Math.cos(a)*4.2,vy:Math.sin(a)*4.2})}}}
+     if(bossStage===3){if(cycle===1){chargeY=py;tone(100,.35)}if(cycle<50){bossY+=(chargeY-bossY)*.08;bossX=Math.min(505,bossX+6)}else if(cycle<95){bossX=Math.max(80,bossX-11)}else if(cycle<115){bossX=80}else if(cycle<185){bossX=Math.min(505,bossX+7)}else{bossX=505;bossY=160+Math.sin(frame/50)*45}if(cycle===50)tone(55,.6)}
+     const floorHP=[0,360,240,120,0][bossStage];if(bossHP<=floorHP&&attackClock>=240&&bossStage<4){bossStage++;attackClock=0;bossX=505;hazards=[];tone(440,.3);pickups.push({x:410,y:160,kind:bossStage===3?'shield':'rapid'})}
+    }
+    if(Math.abs(px-bossX)<65&&Math.abs(py-bossY)<65)hit()
+   }
+   for(const b of bullets){b.x+=b.vx;b.y+=b.vy;for(const e of enemies){if(e.hp>0&&Math.abs(b.x-e.x)<15&&Math.abs(b.y-e.y)<12){e.hp=Math.max(0,e.hp-(b.damage??1));b.x=W+100;if(e.hp===0){score+=100;tone(140,.1);if(++kills%2===0)pickups.push({x:e.x,y:e.y,kind:kinds[(kills/2-1)%5]})}break}}if(!death&&frame>=870&&b.x<W+50&&b.x+(b.kind==='laser'?24:10)>=bossX-75&&b.x-b.vx<=bossX+155&&Math.abs(b.y-bossY)<=102){bossHP=Math.max(bossStage===4&&attackClock<240?1:[0,360,240,120,0][bossStage],bossHP-(b.damage??1));bossFlash=7;b.x=W+100;score+=10;tone(180,.025);if(bossHP<=0&&bossStage===4&&attackClock>=240){win();return}}}
+   for(const b of hazards){if(b.rocket){b.age=(b.age??0)+1;if(b.age<75){const a=Math.atan2(py-b.y,px-b.x),v=Math.atan2(b.vy,b.vx),d=Math.atan2(Math.sin(a-v),Math.cos(a-v));const next=v+Math.max(-.035,Math.min(.035,d));b.vx=Math.cos(next)*3.6;b.vy=Math.sin(next)*3.6}}b.x+=b.vx;b.y+=b.vy;if(Math.abs(b.x-px)<12&&Math.abs(b.y-py)<9){hit();b.x=-100}}
    for(const p of pickups){p.x-=1.5;if(!death&&Math.abs(p.x-px)<23&&Math.abs(p.y-py)<18){if(p.kind==='life')hp=Math.min(5,hp+1);else if(p.kind==='shield')shield=600;else{weapon=p.kind;weaponTime=720}p.x=-100;tone(880,.16)}}pickups=pickups.filter(p=>p.x>-20);
    bullets=bullets.filter(b=>b.x<W+20&&b.y>23&&b.y<H);hazards=hazards.filter(b=>b.x>-30&&b.x<W+80&&b.y>20&&b.y<H+20);enemies=enemies.filter(e=>e.hp>0&&e.x>-30);
   };
@@ -100,13 +102,17 @@ export default function BoneBoss(){
    for(const e of enemies){poly([e.x-17,e.y,e.x-4,e.y-10,e.x+17,e.y-7,e.x+9,e.y,e.x+17,e.y+7,e.x-4,e.y+10],'#8044bf');rect(e.x-10,e.y-3,18,6,'#64e8ff');rect(e.x+5,e.y-2,6,4,'#fff')}
    if((frame>=870||phase==='ready')&&finale<140&&phase!=='win'){ctx.save();if(finale){ctx.translate(Math.sin(finale*2.1)*Math.min(8,finale/12),Math.cos(finale*1.7)*4);ctx.filter='brightness('+ (1+Math.abs(Math.sin(finale*.22))*1.8)+')';}if(bossFlash>0)ctx.filter='brightness(1.8)';drawSkull();ctx.restore();if(bossFlash>0)label('HIT!',Math.min(W-40,bossX-35),Math.max(36,bossY-95),'#ffcf55',12)}
    if(!death&&(inv%8<4||inv===0)){if(ship){ctx.drawImage(ship,Math.round(px-24),Math.round(py-12),49,24);rect(px-27-(frame%5),py-1,10+frame%5,3,'#38eaff');rect(px-24,py,8,1,'#fff')}else{poly([px-17,py-7,px+2,py-7,px+19,py,px+2,py+7,px-17,py+7,px-10,py],'#d7e4eb');poly([px-7,py-4,px+7,py-4,px+15,py,px-5,py+2],'#147fa7');rect(px-24-(frame%4),py-2,12+frame%4,4,'#13d6fc');rect(px-20,py-1,8,2,'#fff')}}
-   if(attackClock&& !finale&&!death){const cycle=attackClock%360;if(cycle>=190&&cycle<230){ctx.globalAlpha=.65;for(let x=0;x<bossX-50;x+=18)rect(x,beamY-1,10,2,'#ff436b');ctx.globalAlpha=1;label('WARNING: DEATH RAY',20,beamY<60?beamY+24:beamY-14,'#ff668b',11)}if(cycle>=230&&cycle<258){rect(0,beamY-11,bossX-50,22,'#aa164e');rect(0,beamY-5,bossX-50,10,'#ff487c');rect(0,beamY-2,bossX-50,4,'#fff')}}
+   if(attackClock&&!finale&&!death){const c=attackClock%120,cycle=attackClock%240;const names=['','ROCKET ASSAULT','LASER ARRAY','RAMMING ATTACK','EYES OF OSSUARY'];label('STAGE '+bossStage+' / 4: '+names[bossStage],12,42,'#ffcf55',12);
+    if((bossStage===2||bossStage===4)&&c>=1&&c<65){const ys=bossStage===4?[beamY-25,beamY+25]:[beamY];for(const y of ys){if(c<35){for(let x=0;x<bossX-50;x+=18)rect(x,y-1,10,2,'#ff436b')}else{rect(0,y-10,bossX-50,20,'#aa164e');rect(0,y-4,bossX-50,8,'#ff487c');rect(0,y-1,bossX-50,3,'#fff')}}if(c<35)label('LASER WARNING',20,Math.max(65,beamY-40),'#ff668b',11)}
+    if(bossStage===4){for(const y of [bossY-32,bossY-12]){rect(bossX-45,y,13,7,'#ff245f');rect(bossX-43,y+2,8,3,'#fff')}}
+    if(bossStage===3&&cycle<50){for(let x=0;x<bossX-60;x+=16)rect(x,chargeY-1,8,2,'#ff9c45');label('INCOMING CHARGE!',180,Math.max(65,chargeY-15),'#ffcf55',14)}
+   }
    if(finale){const t=finale;const cx=Math.min(W-30,bossX+20);if(t<140){for(let i=0;i<7;i++){const age=t-i*18;if(age>=0&&age<42){const x=cx-65+(i*47)%120,y=bossY-80+(i*67)%160;ctx.fillStyle=age<10?'#fff':'#ff7638';ctx.beginPath();ctx.arc(x,y,Math.max(2,age*1.1),0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffcf55';ctx.beginPath();ctx.arc(x,y,Math.max(1,age*.45),0,Math.PI*2);ctx.fill()}}label('CORE COLLAPSE',245,55,'#ffcf55',16)}else{const age=t-140;for(let i=0;i<180;i++){const a=i*2.39996,v=.65+(i%19)*.27,x=cx+Math.cos(a)*v*age,y=bossY+Math.sin(a)*v*age;ctx.globalAlpha=Math.max(0,1-age/130);rect(x,y,3+i%7,3+i%7,['#fff','#ffcf55','#ff4168','#8c54dd','#64e8ff'][i%5])}ctx.globalAlpha=1;if(age<75){ctx.strokeStyle='#ffb45b';ctx.lineWidth=Math.max(1,8-age/10);ctx.beginPath();ctx.arc(cx,bossY,age*7+10,0,Math.PI*2);ctx.stroke()}if(age<24){ctx.globalAlpha=(24-age)/24;rect(0,23,W,H-23,'#fff');ctx.globalAlpha=1}if(age>55){label('OSSUARY DESTROYED',190,145,'#ffcf55',22);label('FREE WILL RESTORED',231,173,'#64e8ff',15)}}}
-   for(const b of bullets){rect(b.x,b.y-1,b.kind==='laser'?24:10,b.kind==='laser'?5:3,b.kind?colors[b.kind]:'#78edff');rect(b.x+7,b.y,5,1,'#fff')}for(const b of hazards){rect(b.x-3,b.y-3,6,6,'#ef235c');rect(b.x-1,b.y-1,2,2,'#fff')}
+   for(const b of bullets){rect(b.x,b.y-1,b.kind==='laser'?24:10,b.kind==='laser'?5:3,b.kind?colors[b.kind]:'#78edff');rect(b.x+7,b.y,5,1,'#fff')}for(const b of hazards){if(b.rocket){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));rect(-7,-3,14,6,'#e9d7be');rect(5,-2,4,4,'#ff4168');rect(-13,-2,6+frame%3,4,'#ff9c45');ctx.restore()}else{rect(b.x-3,b.y-3,6,6,'#ef235c');rect(b.x-1,b.y-1,2,2,'#fff')}}
    for(const p of pickups){const c=colors[p.kind];poly([p.x,p.y-10,p.x+10,p.y,p.x,p.y+10,p.x-10,p.y],c);rect(p.x-6,p.y-6,12,12,'#090713');label(({spread:'S',laser:'L',rapid:'R',shield:'D',life:'+'})[p.kind],p.x-3,p.y+4,c,11)}
    if(shield&&!death){ctx.strokeStyle=colors.shield;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(px,py,30,19,0,0,Math.PI*2);ctx.stroke()}
    if(death){const t=death;for(let i=0;i<70;i++){const a=i*2.39996,v=0.5+(i%11)*.34;const x=px+Math.cos(a)*v*t,y=py+Math.sin(a)*v*t;ctx.globalAlpha=Math.max(0,1-t/85);rect(x,y,2+i%4,2+i%4,['#fff','#ffcf55','#ff4168','#8c54dd','#64e8ff'][i%5])}ctx.globalAlpha=1;if(t<18){ctx.fillStyle=t%4<2?'#fff':'#ff7638';ctx.beginPath();ctx.arc(px,py,Math.max(1,30-t),0,Math.PI*2);ctx.fill()}label('INTERCEPTOR DESTROYED',210,155,'#ff557c',15)}
-   rect(0,0,W,23,'#090713');label('PILOT 07  '+('♥ '.repeat(Math.max(0,hp))),10,16,'#74e8fc');label('SCORE '+String(score).padStart(5,'0'),238,16);if(frame>=870){label('OSSUARY',455,15,'#f95b88');rect(523,7,106,9,'#30152d');rect(523,7,Math.max(0,bossHP)/160*106,9,'#df285b')}else label('APPROACH '+Math.min(100,Math.floor(frame/8.7))+'%',475,16,'#ac80e6');
+   rect(0,0,W,23,'#090713');label('PILOT 07  '+('♥ '.repeat(Math.max(0,hp))),10,16,'#74e8fc');label('SCORE '+String(score).padStart(5,'0'),238,16);if(frame>=870){label('OSSUARY',455,15,'#f95b88');rect(523,7,106,9,'#30152d');rect(523,7,Math.max(0,bossHP)/480*106,9,'#df285b')}else label('APPROACH '+Math.min(100,Math.floor(frame/8.7))+'%',475,16,'#ac80e6');
    if(phase==='fight'&&!death){label(weaponTime>0?weapon.toUpperCase()+' '+Math.ceil(weaponTime/60)+'s':'STANDARD CANNON',12,309,weaponTime>0?colors[weapon]:'#74e8fc',10);if(shield)label('SHIELD '+Math.ceil(shield/60)+'s',180,309,colors.shield,10)}
    if(!finale&&frame>780&&frame<890&&phase==='fight')label('WARNING: OSSUARY CORE',202,155,'#ff4d80',17);
   };
