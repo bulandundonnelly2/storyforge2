@@ -92,6 +92,12 @@ export default function BoneBoss(){
    r(-49,-15,5,54,'#4d245e');r(-53,5,13,17,'#00c7ee');r(-50,9,7,8,frame%12<6?'#fff':'#f4278e');
    ctx.restore();
   };
+  // Native-resolution dithered planet: spherical lighting, procedural continents, clouds and city lights.
+  const earth=document.createElement('canvas');earth.width=earth.height=240;const ec=earth.getContext('2d')!;const earthData=ec.createImageData(240,240);
+  const cityPixels:{x:number;y:number}[]=[];
+  for(let y=0;y<240;y++)for(let x=0;x<240;x++){const u=(x-119.5)/118,v=(y-119.5)/118,r=u*u+v*v;if(r>1)continue;const z=Math.sqrt(1-r),lon=Math.atan2(u,z),lat=Math.asin(v);const n=Math.sin(lon*5+Math.sin(lat*7)*1.5)+.65*Math.sin(lat*9-lon*4)+.32*Math.sin(lon*19+lat*13)+.16*Math.sin(lon*43-lat*37);const land=n>.48;const cloud=Math.sin(lon*12+lat*18+Math.sin(lon*8)*2)+.65*Math.sin(lat*39-lon*17)>.97;const light=Math.max(.13,Math.min(1, .38-u*.55-v*.38+z*.48));const d=((x%2)*2+y%2)*.045;let base=land?(n>1.05?[130,151,112]:[52,117,95]):[25,77,148];if(Math.abs(v)>.86)base=[175,211,224];if(cloud)base=[171,204,220];const rim=Math.pow(1-z,4)*.65;const i=(y*240+x)*4;for(let k=0;k<3;k++)earthData.data[i+k]=Math.min(255,Math.round((base[k]*(light+d)+[39,119,179][k]*rim)/12)*12);earthData.data[i+3]=255;if(land&&!cloud&&light<.65&&(x*73+y*131)%47<3)cityPixels.push({x,y})}
+  ec.putImageData(earthData,0,0);
+  const cinematicText=(str:string,y:number,c:string,size:number)=>{ctx.font='bold '+size+'px monospace';const x=Math.round((W-ctx.measureText(str).width)/2);label(str,x+2,y+2,'#000',size);label(str,x,y,c,size)};
   const paint=()=>{
    rect(0,0,W,H,'#050510');
    for(const s of stars){const x=((s.x-frame*s.v)%W+W)%W;rect(x,s.y,s.s,s.s,s.s===3?'#753eb2':s.s===2?'#1d789d':'#37395d')}
@@ -112,12 +118,27 @@ export default function BoneBoss(){
    for(const p of pickups){const c=colors[p.kind];poly([p.x,p.y-10,p.x+10,p.y,p.x,p.y+10,p.x-10,p.y],c);rect(p.x-6,p.y-6,12,12,'#090713');label(({spread:'S',laser:'L',rapid:'R',shield:'D',life:'+'})[p.kind],p.x-3,p.y+4,c,11)}
    if(shield&&!death){ctx.strokeStyle=colors.shield;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(px,py,30,19,0,0,Math.PI*2);ctx.stroke()}
    if(death){const t=death;for(let i=0;i<70;i++){const a=i*2.39996,v=0.5+(i%11)*.34;const x=px+Math.cos(a)*v*t,y=py+Math.sin(a)*v*t;ctx.globalAlpha=Math.max(0,1-t/85);rect(x,y,2+i%4,2+i%4,['#fff','#ffcf55','#ff4168','#8c54dd','#64e8ff'][i%5])}ctx.globalAlpha=1;if(t<18){ctx.fillStyle=t%4<2?'#fff':'#ff7638';ctx.beginPath();ctx.arc(px,py,Math.max(1,30-t),0,Math.PI*2);ctx.fill()}label('INTERCEPTOR DESTROYED',210,155,'#ff557c',15)}
-   if(finale>=300){const t=finale;rect(0,0,W,24,'#050510');rect(0,296,W,24,'#050510');if(t<450){label('TRANSMISSION: ALL SYSTEMS COLLAPSING',130,49,'#ffcf55',13);label('PILOT 07 — ESCAPING THE OSSUARY',145,282,'#64e8ff',12);for(let i=0;i<18;i++){const x=((i*91-(t-300)*9)%W+W)%W;rect(x,40+(i*53)%240,12+i%14,2,'#b15a7e')}}else{
-    rect(0,0,W,H,'#050510');for(const star of stars)rect(star.x,star.y,star.s,star.s,star.s===3?'#9bb9d3':'#414b70');
-    const rise=Math.min(1,(t-450)/100);const cy=310-rise*72;ctx.save();ctx.beginPath();ctx.arc(320,cy+90,205,0,Math.PI*2);ctx.clip();rect(110,cy-120,420,420,'#102e58');for(let i=0;i<85;i++){const x=125+(i*83)%390,y=cy-100+(i*47)%270;rect(x,y,14+i%31,5+i%13,i%3?'#245d75':'#387b68')}for(let i=0;i<65;i++){const x=130+(i*71)%380,y=cy-80+(i*29)%200;if(t>565+i*2)rect(x,y,2+i%3,2,'#ffe5a0')}ctx.restore();ctx.strokeStyle='#63c7ed';ctx.lineWidth=2;ctx.beginPath();ctx.arc(320,cy+90,205,Math.PI,2*Math.PI);ctx.stroke();
-    const centered=(str:string,y:number,c:string,size:number)=>{ctx.font='bold '+size+'px monospace';label(str,(W-ctx.measureText(str).width)/2,y,c,size)};
-    if(t<600){centered('EARTH — SIGNAL RESTORED',58,'#64e8ff',19);centered('Across the planet, the machines fall silent.',90,'#e3e9f3',13)}else if(t<750){centered('FOR THE FIRST TIME IN GENERATIONS...',54,'#e3e9f3',14);centered('HUMANITY THINKS FOR ITSELF.',86,'#ffcf55',19);centered('PILOT 07 HAS RETURNED.',116,'#64e8ff',12)}else{centered('SPIT OUT THE BONE',65,'#e3e9f3',28);centered('HUMANITY IS FREE',100,'#64e8ff',19);centered('MISSION COMPLETE  /  SCORE '+String(score).padStart(5,'0'),128,'#ffcf55',13);centered('THE END',170,'#fff',20)}
-   }return}
+   if(finale>=300){const t=finale;const age=t-300;
+    if(t<450){
+     // Deep parallax escape tunnel, falling girders, sparks and a long engine plume.
+     for(let i=0;i<42;i++){const x=((i*91-age*(4+i%8))%W+W)%W,y=35+(i*53)%250;rect(x,y,5+i%23,1+i%3,i%4===0?'#ffc46b':'#8b3d7e')}
+     for(let i=0;i<9;i++){const x=((i*103-age*8)%720+720)%720-40,y=i%2?260:37;ctx.save();ctx.translate(x,y);ctx.rotate((age+i*9)*.025);rect(-18,-6,36,12,'#39263d');rect(-17,-5,34,2,'#ad5981');rect(-10,2,22,2,'#ec9c67');ctx.restore()}
+     if(px<W+40){for(let i=0;i<18;i++){const x=px-24-i*3,y=py+Math.sin(i*2+frame)*i*.28;rect(x,y,7,Math.max(1,5-i/4),i<5?'#fff':i<11?'#50e5ff':'#6547bd')}}
+     rect(0,0,W,28,'#050510');rect(0,292,W,28,'#050510');cinematicText('TRANSMISSION: ALL SYSTEMS COLLAPSING',19,'#ffcf55',12);cinematicText('PILOT 07 // ESCAPE VECTOR CONFIRMED',311,'#64e8ff',12)
+    }else{
+     rect(0,0,W,H,'#030510');
+     for(let i=0;i<220;i++){const x=(i*137.31)%W,y=(i*79.17)%H;rect(x,y,i%19===0?2:1,i%19===0?2:1,['#25314c','#3b5170','#9ebad0','#536383'][i%4])}
+     for(let i=0;i<450;i++){const x=(i*113.7)%W,y=135+Math.sin(x/82)*35+(i*23%56)-28;rect(x,y,1,1,i%3?'#181b37':'#2d2446')}
+     const rise=Math.min(1,(t-450)/105),size=328,ex=156,ey=245-rise*100;
+     ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#2388b9';ctx.beginPath();ctx.arc(320,ey+size/2,size/2+5,0,Math.PI*2);ctx.fill();ctx.restore();ctx.drawImage(earth,ex,ey,size,size);
+     for(let i=0;i<cityPixels.length;i++){if(t>535+i*2){const p=cityPixels[i];rect(ex+p.x*size/240,ey+p.y*size/240,2,2,i%3?'#ffc66d':'#fff0bd')}}
+     // Small silhouetted interceptor crosses the illuminated horizon.
+     if(t<710){const sx=-45+(t-450)*2.7,sy=176-(t-450)*.14;ctx.save();ctx.translate(sx,sy);if(ship)ctx.drawImage(ship,-23,-11,46,22);else poly([-16,-5,17,0,-16,5,-8,0],'#c9e9fa');rect(-39,0,16,2,'#45dcff');rect(-28,0,7,1,'#fff');ctx.restore()}
+     rect(0,0,W,126,'#050510');rect(0,126,W,1,'#283b55');rect(0,294,W,26,'#050510');
+     if(t<600){cinematicText('EARTH // SIGNAL RESTORED',47,'#64e8ff',22);cinematicText('Across the planet, the machines fall silent.',82,'#e3e9f3',13);cinematicText('TRANSMISSION RECEIVED',311,'#64e8ff',11)}
+     else if(t<750){cinematicText('FOR THE FIRST TIME IN GENERATIONS...',42,'#e3e9f3',14);cinematicText('HUMANITY THINKS FOR ITSELF.',77,'#ffcf55',22);cinematicText('PILOT 07 HAS RETURNED',311,'#64e8ff',12)}
+     else{cinematicText('SPIT OUT THE BONE',48,'#e3e9f3',31);cinematicText('HUMANITY IS FREE',83,'#64e8ff',20);cinematicText('MISSION COMPLETE // SCORE '+String(score).padStart(5,'0'),111,'#ffcf55',12);cinematicText('T H E   E N D',311,'#fff',15)}
+    }return}
    rect(0,0,W,23,'#090713');label('PILOT 07  '+('♥ '.repeat(Math.max(0,hp))),10,16,'#74e8fc');label('SCORE '+String(score).padStart(5,'0'),238,16);if(frame>=870){label('OSSUARY',455,15,'#f95b88');rect(523,7,106,9,'#30152d');rect(523,7,Math.max(0,bossHP)/480*106,9,'#df285b')}else label('APPROACH '+Math.min(100,Math.floor(frame/8.7))+'%',475,16,'#ac80e6');
    if(phase==='fight'&&!death){label(weaponTime>0?weapon.toUpperCase()+' '+Math.ceil(weaponTime/60)+'s':'STANDARD CANNON',12,309,weaponTime>0?colors[weapon]:'#74e8fc',10);if(shield)label('SHIELD '+Math.ceil(shield/60)+'s',180,309,colors.shield,10)}
    if(!finale&&frame>780&&frame<890&&phase==='fight')label('WARNING: OSSUARY CORE',202,155,'#ff4d80',17);
